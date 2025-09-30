@@ -1,0 +1,18 @@
+This directory contains Alembic migrations for your Flask application.
+
+Migrations are versioned steps that modify the database schema. They are used
+by Flask‑Migrate to evolve your database alongside your models.
+
+To generate a new migration locally use:
+
+```
+flask db migrate -m "Describe your change here"
+```
+
+Then apply the migration with:
+
+```
+flask db upgrade
+```
+
+For more information see the Flask‑Migrate documentation.
