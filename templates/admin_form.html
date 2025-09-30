@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{% if admin %}Edit Admin{% else %}Create Admin{% endif %} - AI Receptionist{% endblock %}
+{% block content %}
+<h1>{% if admin %}Edit{% else %}Create{% endif %} Admin</h1>
+<form method="post">
+    <label for="username">Username:</label><br />
+    <input type="text" id="username" name="username" value="{{ form.username or (admin.username if admin else '') }}" /><br /><br />
+    <label for="password">Password{% if admin %} (leave blank to keep current){% endif %}:</label><br />
+    <input type="password" id="password" name="password" /><br /><br />
+    <label for="clinic_id">Clinic:</label><br />
+    <select id="clinic_id" name="clinic_id">
+        <option value="">-- None (Super admin only) --</option>
+        {% for c in clinics %}
+            <option value="{{ c.id }}" {% if (form.clinic_id or (admin.clinic_id if admin else None)) == c.id %}selected{% endif %}>{{ c.name }} ({{ c.slug }})</option>
+        {% endfor %}
+    </select><br /><br />
+    <label><input type="checkbox" name="is_superadmin" value="1" {% if (form.is_superadmin == '1') or (admin.is_superadmin if admin else False) %}checked{% endif %} /> Super admin</label><br /><br />
+    <button type="submit">Save</button>
+    <a href="{{ url_for('admins_list') }}">Cancel</a>
+</form>
+{% endblock %}
