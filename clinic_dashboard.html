@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ clinic.name }} - AI Receptionist{% endblock %}
+{% block content %}
+<h1>{{ clinic.name }} Clinic Dashboard</h1>
+<p>Slug: {{ clinic.slug }}</p>
+
+<p><a href="{{ url_for('api_keys', slug=clinic.slug) }}">Manage API Keys</a></p>
+
+<h2>Recent SMS Logs</h2>
+{% if sms_logs %}
+<table>
+    <tr><th>Date</th><th>From</th><th>To</th><th>Body</th><th>Status</th></tr>
+    {% for log in sms_logs %}
+        <tr>
+            <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>{{ log.from_number }}</td>
+            <td>{{ log.to_number }}</td>
+            <td>{{ log.body[:50] }}{% if log.body|length > 50 %}…{% endif %}</td>
+            <td>{{ log.status or '-' }}</td>
+        </tr>
+    {% endfor %}
+</table>
+{% else %}
+    <p>No SMS logs available.</p>
+{% endif %}
+
+<h2>Recent Call Logs</h2>
+{% if call_logs %}
+<table>
+    <tr><th>Date</th><th>From</th><th>To</th><th>Status</th><th>Duration (s)</th></tr>
+    {% for log in call_logs %}
+        <tr>
+            <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>{{ log.from_number }}</td>
+            <td>{{ log.to_number }}</td>
+            <td>{{ log.status or '-' }}</td>
+            <td>{{ log.duration or '-' }}</td>
+        </tr>
+    {% endfor %}
+</table>
+{% else %}
+    <p>No call logs available.</p>
+{% endif %}
+
+{% endblock %}
