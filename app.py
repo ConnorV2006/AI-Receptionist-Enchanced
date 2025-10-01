@@ -32,6 +32,63 @@ except Exception:
     MessagingResponse = None  # type: ignore
     VoiceResponse = None  # type: ignore
 
+# Attempt to import the OpenAI client. This optional dependency is used to
+# generate concise summaries of incoming messages. If the package is not
+# available or an API key is not configured, message summaries fall back
+# to the original text (truncated). See ``generate_summary`` for details.
+try:
+    import openai  # type: ignore
+except Exception:
+    # If import fails, assign None. The application will gracefully fall back
+    # to returning the original message when summarisation is unavailable.
+    openai = None  # type: ignore
+
+def generate_summary(text: str, max_tokens: int = 150) -> str:
+    """Return a concise summary of the provided text.
+
+    This helper attempts to call the OpenAI ChatCompletion API to produce
+    a short summary of the caller's message. If the ``openai`` module
+    isn't installed or the ``OPENAI_API_KEY`` environment variable is
+    missing, the function returns a truncated version of the input text.
+
+    Args:
+        text: The raw input text from the caller or patient.
+        max_tokens: Desired maximum number of tokens in the summary when
+            using the OpenAI API. Defaults to 150 which roughly equates to
+            50–75 words.
+
+    Returns:
+        A string containing either the AI‑generated summary or a truncated
+        version of the original text.
+    """
+    # If OpenAI isn't available or no API key is configured, fall back
+    # to returning at most the first 300 characters of the input.
+    if openai is None or not os.environ.get("OPENAI_API_KEY"):
+        return text[:300]
+    try:
+        # Build a prompt instructing the assistant to summarise concisely.
+        system_prompt = (
+            "You are a helpful medical receptionist. "
+            "Summarise the following patient message in one or two sentences."
+        )
+        # Call the chat completion endpoint. We set a low temperature for
+        # determinism and limit the number of tokens.
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # Use GPT‑3.5 for cost efficiency
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": text},
+            ],
+            max_tokens=max_tokens,
+            temperature=0.3,
+        )
+        summary = response.choices[0].message["content"].strip()
+        return summary
+    except Exception as exc:
+        # On any exception (network issues, API errors), log and fall back
+        app.logger.warning("OpenAI summary generation failed: %s", exc)
+        return text[:300]
+
 
 ###############################################################################
 # Application setup
@@ -706,6 +763,113 @@ def log_call_api() -> Response:
     db.session.add(log_entry)
     db.session.commit()
     return jsonify({"id": log_entry.id, "message": "Call log created"}), 201
+
+
+###############################################################################
+# Routes: Global Twilio webhooks (SMS and voice)
+###############################################################################
+
+
+@app.route("/twilio/sms", methods=["POST"])
+def twilio_sms_global() -> Response:
+    """Handle inbound SMS messages for the default clinic.
+
+    This route allows you to configure a single Twilio number to point at
+    ``/twilio/sms`` without specifying a clinic slug. It will look up the
+    first configured clinic in the database and log the message as a call
+    interaction, generating an AI summary where possible. A concise reply
+    containing the summary is returned to the caller via TwiML. If no clinic
+    exists in the database a generic response is sent.
+    """
+    # Fetch the first clinic (ordered by creation). If no clinic is found
+    # return an informative response.
+    clinic = Clinic.query.order_by(Clinic.id).first()
+    if not clinic:
+        # Build a simple response indicating no clinic configured.
+        if MessagingResponse:
+            resp = MessagingResponse()
+            resp.message("No clinic is configured. Please set up a clinic first.")
+            return Response(str(resp), mimetype="application/xml")
+        return Response("No clinic configured.", mimetype="text/plain")
+    # Extract relevant Twilio parameters from the inbound request.
+    from_number = request.form.get("From") or ""
+    to_number = request.form.get("To") or ""
+    body = request.form.get("Body") or ""
+    # Generate an AI summary of the message. Falls back to truncation if
+    # OpenAI is unavailable or misconfigured.
+    summary = generate_summary(body)
+    # Create a call log entry to persist the transcript and summary in the
+    # notes field. We treat SMS interactions as inbound calls for the purposes
+    # of summarisation. The direction is set to inbound, call_sid is None.
+    notes = f"Transcript: {body}\nAI Summary: {summary}"
+    call_log = CallLog(
+        clinic=clinic,
+        call_sid=None,
+        from_number=from_number,
+        to_number=to_number,
+        direction="inbound",
+        status=None,
+        start_time=datetime.utcnow(),
+        notes=notes,
+    )
+    db.session.add(call_log)
+    db.session.commit()
+    # Build TwiML response. If the Twilio helper library is available,
+    # respond with XML instructing Twilio to send the summary. Otherwise
+    # return plain text.
+    if MessagingResponse:
+        resp = MessagingResponse()
+        resp.message(f"Thanks! Summary: {summary}")
+        return Response(str(resp), mimetype="application/xml")
+    return Response(f"Thanks! Summary: {summary}", mimetype="text/plain")
+
+
+@app.route("/twilio/voice", methods=["POST"])
+def twilio_voice_global() -> Response:
+    """Handle inbound voice calls for the default clinic.
+
+    When a call comes in, this route logs basic call metadata and instructs
+    the caller to leave a voicemail. The voice recording will be sent to
+    your Twilio console and can be processed separately (e.g. using the
+    ``/api/log-call`` endpoint or another transcription service). If no
+    clinic exists, a plain text response is returned.
+    """
+    clinic = Clinic.query.order_by(Clinic.id).first()
+    if not clinic:
+        # No clinic configured. Respond politely.
+        if VoiceResponse:
+            vr = VoiceResponse()
+            vr.say("No clinic is configured. Please contact the administrator.")
+            return Response(str(vr), mimetype="application/xml")
+        return Response("No clinic configured.", mimetype="text/plain")
+    # Extract parameters
+    from_number = request.form.get("From") or ""
+    to_number = request.form.get("To") or ""
+    call_sid = request.form.get("CallSid")
+    direction = request.form.get("Direction", "inbound")
+    # Create call log entry with start time. End time and duration will be
+    # filled in by the status callback (see /t/<slug>/voice/status) if used.
+    log_entry = CallLog(
+        clinic=clinic,
+        call_sid=call_sid,
+        from_number=from_number,
+        to_number=to_number,
+        direction=direction,
+        start_time=datetime.utcnow(),
+        status=request.form.get("CallStatus"),
+    )
+    db.session.add(log_entry)
+    db.session.commit()
+    # Respond with TwiML instructing caller to leave a voicemail. We reuse
+    # Twilio's ``record`` verb to record up to 120 seconds. If Twilio helper
+    # library isn't available we return plain text instead.
+    if VoiceResponse:
+        vr = VoiceResponse()
+        vr.say(f"Thank you for calling {clinic.name}. Please leave a message after the beep.")
+        vr.record(max_length=120)
+        return Response(str(vr), mimetype="application/xml")
+    else:
+        return Response("Thank you for calling. Please leave a message.", mimetype="text/plain")
 
 
 ###############################################################################
