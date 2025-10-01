@@ -10,3 +10,10 @@ gunicorn==21.2.0
 # you prefer the non-binary distribution or are compiling from source, you
 # may use `psycopg2` instead. See README for details.
 psycopg2-binary>=2.9
+
+# OpenAI client library for generating AI summaries of incoming messages.
+# This package is optional but recommended if you want automatic
+# summarisation of patient messages via the OpenAI API. If you don't
+# configure an OPENAI_API_KEY in your environment, the application will
+# gracefully fall back to returning the original message.
+openai>=0.28
