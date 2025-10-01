@@ -4,4 +4,9 @@ flask_migrate==4.0.4
 cryptography==41.0.5
 twilio==9.0.4
 gunicorn==21.2.0
-psycopg2-binary
+
+# Include a Postgres driver. Render uses PostgreSQL by default, so we need
+# psycopg2-binary to allow SQLAlchemy to communicate with the database. If
+# you prefer the non-binary distribution or are compiling from source, you
+# may use `psycopg2` instead. See README for details.
+psycopg2-binary>=2.9

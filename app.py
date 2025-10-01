@@ -2,8 +2,18 @@ import os
 import secrets
 from datetime import datetime
 
-from flask import (Flask, abort, flash, redirect, render_template, request,
-                   session, url_for, Response)
+from flask import (
+    Flask,
+    abort,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+    Response,
+)
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -640,6 +650,62 @@ def voice_status(slug: str) -> Response:
         log.end_time = datetime.utcnow()
         db.session.commit()
     return Response("", status=204)
+
+
+###############################################################################
+# Routes: Generic call log ingestion
+###############################################################################
+
+@app.route("/api/log-call", methods=["POST"])
+def log_call_api() -> Response:
+    """API endpoint to log call data with an AI generated summary.
+
+    This endpoint is designed for integrations such as n8n or other external
+    services to record call interactions directly into the database. It
+    expects a JSON payload with the following fields:
+
+      - ``clinic_id`` (int): ID of the clinic the call belongs to.
+      - ``patient_message`` (str): Raw transcript or message text from the caller.
+      - ``ai_summary`` (str): AI‑generated summary of the call.
+
+    The incoming data is validated and then stored in the CallLog table. The
+    summary and transcript are concatenated and stored in the ``notes`` column
+    of the CallLog. The created log's ID is returned in the JSON response.
+    On error (missing fields or invalid clinic), a 400 response is returned.
+    """
+    data = request.get_json(silent=True) or {}
+    clinic_id = data.get("clinic_id")
+    patient_message = data.get("patient_message")
+    ai_summary = data.get("ai_summary")
+    # Require all fields
+    if not clinic_id or not patient_message or not ai_summary:
+        return (
+            jsonify(
+                {
+                    "error": "clinic_id, patient_message and ai_summary are required",
+                }
+            ),
+            400,
+        )
+    # Fetch clinic; 404 if not found
+    clinic = Clinic.query.get_or_404(int(clinic_id))
+    # Build call log. We intentionally leave call_sid, from/to numbers empty as
+    # they may not be relevant for AI summaries. Direction is set to inbound
+    # by default. Notes stores both the transcript and the summary.
+    notes = f"Transcript: {patient_message}\nAI Summary: {ai_summary}"
+    log_entry = CallLog(
+        clinic=clinic,
+        call_sid=None,
+        from_number="",
+        to_number="",
+        direction="inbound",
+        status=None,
+        start_time=datetime.utcnow(),
+        notes=notes,
+    )
+    db.session.add(log_entry)
+    db.session.commit()
+    return jsonify({"id": log_entry.id, "message": "Call log created"}), 201
 
 
 ###############################################################################
