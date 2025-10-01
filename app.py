@@ -103,10 +103,32 @@ app = Flask(__name__)
 
 # Database configuration. Render.com uses DATABASE_URL automatically. Locally
 # this defaults to a SQLite file. Adjust as needed for other environments.
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
-    "DATABASE_URL", "sqlite:///local.db"
-)
+#
+# SQLAlchemy 2.0 removed support for the legacy ``postgres://`` URI scheme and
+# requires ``postgresql://`` instead. To support existing environment
+# variables, coerce any postgres:// URI to the correct postgresql:// form. See
+# https://docs.sqlalchemy.org/en/20/core/engines.html#postgresql for details.
+database_url = os.environ.get("DATABASE_URL", "sqlite:///local.db")
+if database_url.startswith("postgres://"):
+    # Replace only the scheme prefix (first occurrence) to preserve the rest of
+    # the connection string intact. This fixes ``Can't load plugin:
+    # sqlalchemy.dialects:postgres`` errors when deploying to Render.
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# ---------------------------------------------------------------------------
+# Session cookie security
+#
+# Protect session cookies by enabling secure settings. By default cookies are
+# marked as HttpOnly and SameSite=Lax to mitigate cross‑site request forgery.
+# The SESSION_COOKIE_SECURE flag is determined by an environment variable.
+# When running locally over http (e.g. during development) you may set
+# SESSION_COOKIE_SECURE to false. In production the default is true so that
+# session cookies are only sent over https connections.
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true"
 
 # Flask secret key for session handling. MUST be set for production use.
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
@@ -746,6 +768,35 @@ def log_call_api() -> Response:
         )
     # Fetch clinic; 404 if not found
     clinic = Clinic.query.get_or_404(int(clinic_id))
+
+    # Optional API key enforcement. When REQUIRE_API_KEY is set to "true" in
+    # the environment, this endpoint expects a valid API key to be provided
+    # either in the Authorization header using the Bearer scheme or as a
+    # field in the JSON payload. The key must correspond to an active ApiKey
+    # associated with the target clinic. If authentication fails the
+    # request is rejected with a 401 error and no data is persisted.
+    if os.environ.get("REQUIRE_API_KEY", "false").lower() == "true":
+        # Extract token from Authorization header or JSON body
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.lower().startswith("bearer "):
+            token = auth_header.split(" ", 1)[1].strip()
+        if not token:
+            token = data.get("api_key")
+        if not token:
+            return (
+                jsonify({"error": "Missing API key"}),
+                401,
+            )
+        api_key_obj = ApiKey.query.filter_by(
+            key=token, clinic_id=clinic.id, is_active=True
+        ).first()
+        if not api_key_obj:
+            return (
+                jsonify({"error": "Invalid or inactive API key"}),
+                401,
+            )
+
     # Build call log. We intentionally leave call_sid, from/to numbers empty as
     # they may not be relevant for AI summaries. Direction is set to inbound
     # by default. Notes stores both the transcript and the summary.
@@ -910,3 +961,58 @@ def create_clinic_command() -> None:
     db.session.add(clinic)
     db.session.commit()
     print(f"Clinic {slug} created successfully.")
+
+# ---------------------------------------------------------------------------
+# One‑time setup route
+#
+# This endpoint allows the application to bootstrap its first clinic and
+# administrator when shell access is unavailable (e.g. in certain PaaS
+# environments). To protect against unauthorised creation, set the
+# environment variable ``SETUP_TOKEN`` to a secret value and include it
+# as a ``token`` query parameter in your request. The route will do
+# nothing if an admin or clinic already exists. After creation you should
+# remove or unset the ``SETUP_TOKEN`` variable and redeploy the app.
+@app.route("/setup", methods=["POST", "GET"])
+def setup_route() -> Response:
+    # Only allow if a setup token is configured
+    setup_token = os.environ.get("SETUP_TOKEN")
+    if not setup_token:
+        return jsonify({"error": "Setup is disabled"}), 403
+    # Accept token from query string or form body
+    token = request.args.get("token") or request.form.get("token")
+    if token != setup_token:
+        return jsonify({"error": "Invalid setup token"}), 403
+    # Prevent reinitialisation if data already exists
+    if Admin.query.first() or Clinic.query.first():
+        return jsonify({"error": "Already initialised"}), 400
+    # Read initial admin and clinic details from environment variables
+    admin_username = os.environ.get("INIT_ADMIN_USERNAME", "admin")
+    admin_email = os.environ.get("INIT_ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.environ.get("INIT_ADMIN_PASSWORD", "changeme")
+    clinic_slug = os.environ.get("INIT_CLINIC_SLUG", "default")
+    clinic_name = os.environ.get("INIT_CLINIC_NAME", "Default Clinic")
+    twilio_sid = os.environ.get("INIT_TWILIO_ACCOUNT_SID")
+    twilio_token = os.environ.get("INIT_TWILIO_AUTH_TOKEN")
+    twilio_number = os.environ.get("INIT_TWILIO_FROM_NUMBER")
+    # Create clinic
+    clinic = Clinic(slug=clinic_slug, name=clinic_name)
+    f = get_fernet()
+    if twilio_sid and twilio_token and f:
+        clinic.twilio_account_sid_encrypted = f.encrypt(twilio_sid.encode())
+        clinic.twilio_auth_token_encrypted = f.encrypt(twilio_token.encode())
+        clinic.twilio_from_number = twilio_number
+    db.session.add(clinic)
+    db.session.commit()
+    # Create admin
+    admin = Admin(username=admin_username, is_superadmin=True, clinic_id=None)
+    admin.set_password(admin_password)
+    # Optionally set email attribute if model has one (backwards compatibility)
+    if hasattr(admin, "email"):
+        setattr(admin, "email", admin_email)  # type: ignore[attr-defined]
+    db.session.add(admin)
+    db.session.commit()
+    return jsonify({
+        "message": "Initial clinic and admin created successfully",
+        "clinic_slug": clinic.slug,
+        "admin_username": admin.username,
+    }), 201
