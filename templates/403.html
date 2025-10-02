@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>🚫 Permission Denied</h2>
+<p>You don’t have permission to access this page.</p>
+
+<p style="margin-top:10px;">
+  If you believe this is a mistake, please contact your manager or system administrator.
+</p>
+
+<a href="{{ url_for('dashboard') }}">⬅️ Return to Dashboard</a>
+{% endblock %}
