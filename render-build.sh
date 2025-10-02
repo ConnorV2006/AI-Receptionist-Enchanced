@@ -1,11 +1,22 @@
 #!/usr/bin/env bash
+# Exit on error
 set -o errexit
-set -o pipefail
 
-echo "Installing dependencies…"
+# Install dependencies
 pip install -r requirements.txt
 
-echo "Applying database migrations…"
-flask db upgrade || echo "Warning: could not run migrations. Ensure FLASK_APP is set to app.py."
+# Conditionally run migrations
+if [ "$AUTO_MIGRATE" = "true" ]; then
+  echo "🚀 Running flask db upgrade..."
+  flask db upgrade
+else
+  echo "⚠️ AUTO_MIGRATE is disabled. Skipping migrations."
+fi
 
-echo "Build completed."
+# Conditionally run seeding
+if [ "$AUTO_SEED" = "true" ]; then
+  echo "🚀 Running seed_all.py..."
+  python src/seed_all.py
+else
+  echo "⚠️ AUTO_SEED is disabled. Skipping seeding."
+fi
