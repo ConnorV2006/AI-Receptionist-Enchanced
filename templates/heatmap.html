@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Communication Heatmap</h1>
+<p>Total SMS: <strong>{{ total_sms }}</strong> &nbsp; | &nbsp; Total Calls: <strong>{{ total_calls }}</strong></p>
+<table border="1" cellpadding="6">
+  <tr><th>Hour (UTC)</th><th>SMS</th><th>Calls</th></tr>
+  {% for r in rows %}
+    <tr>
+      <td>{{ "%02d:00" % r.hour }}</td>
+      <td>{{ r.sms }}</td>
+      <td>{{ r.calls }}</td>
+    </tr>
+  {% endfor %}
+</table>
+<p style="margin-top:10px;">Tip: Use this to staff your busiest hours.</p>
+{% endblock %}
