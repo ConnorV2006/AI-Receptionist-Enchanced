@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Two-Factor Authentication</h2>
+<p>A 6-digit verification code has been sent to your phone. Please enter it below to complete login.</p>
+
+<form method="post">
+  <label for="code">Verification Code:</label>
+  <input type="text" id="code" name="code" maxlength="6" required>
+  
+  <button type="submit">Verify</button>
+</form>
+
+<p style="margin-top:10px; font-size:0.9em; color:gray;">
+  Didn’t receive it? Contact your admin or request re-send.
+</p>
+{% endblock %}
