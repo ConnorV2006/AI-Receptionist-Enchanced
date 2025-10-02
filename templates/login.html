@@ -1,18 +1,31 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h1>Login</h1>
+<div style="text-align:center; margin-top:50px;">
+  <div style="font-size:60px;">🔑</div>
+  <h2>Login</h2>
 
-<form method="post" action="{{ url_for('login') }}">
-  <label for="username">Username</label><br>
-  <input type="text" id="username" name="username" placeholder="Enter your username" required><br><br>
+  <form method="post" style="display:inline-block; text-align:left; margin-top:20px;">
+    <div style="margin-bottom:10px;">
+      <label for="username">Username</label><br>
+      <input type="text" id="username" name="username" required style="width:250px; padding:6px; border:1px solid #ccc; border-radius:6px;">
+    </div>
 
-  <label for="password">Password</label><br>
-  <input type="password" id="password" name="password" placeholder="Enter your password" required><br><br>
+    <div style="margin-bottom:10px;">
+      <label for="password">Password</label><br>
+      <input type="password" id="password" name="password" required style="width:250px; padding:6px; border:1px solid #ccc; border-radius:6px;">
+    </div>
 
-  <button type="submit">Login</button>
-</form>
+    <div style="text-align:center; margin-top:15px;">
+      <button type="submit" style="padding:10px 20px; background:#800000; color:white; border:none; border-radius:8px; cursor:pointer;">
+        Login
+      </button>
+    </div>
+  </form>
 
-<p style="margin-top:20px;">
-  Forgot your password? Contact your administrator.
-</p>
+  <p style="margin-top:20px; font-size:0.9em; color:gray; max-width:400px; margin-left:auto; margin-right:auto;">
+    🔒 For your security, this system uses <strong>Two-Factor Authentication (2FA)</strong>.  
+    After entering your credentials, you’ll receive a <strong>6-digit verification code</strong> via SMS.
+  </p>
+</div>
 {% endblock %}
