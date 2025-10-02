@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Patient Visit Summary</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    /* Print-friendly overrides */
+    body { background: #fff; }
+    .card { max-width: 700px; margin: 20px auto; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    .print-btn { margin: 20px auto; text-align:center; }
+    @media print {
+      .print-btn { display: none; }
+      nav, footer { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1>📋 Visit Summary</h1>
+  <p><strong>Patient:</strong> {{ patient.name }}</p>
+  <p><strong>Date Printed:</strong> {{ now().strftime("%B %d, %Y %I:%M %p") }}</p>
+</div>
+
+<div class="card">
+  <h2>Upcoming Appointments</h2>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Time</th><th>Location</th></tr>
+    </thead>
+    <tbody>
+      {% if appointments %}
+        {% for appt in appointments %}
+          <tr>
+            <td>{{ appt.date.strftime("%B %d, %Y") }}</td>
+            <td>{{ appt.date.strftime("%I:%M %p") }}</td>
+            <td>{{ appt.location }}</td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="3">No upcoming appointments scheduled.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Recent Communications</h2>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Type</th><th>Message</th></tr>
+    </thead>
+    <tbody>
+      {% if messages %}
+        {% for msg in messages %}
+          <tr>
+            <td>{{ msg.timestamp.strftime("%B %d, %Y %I:%M %p") }}</td>
+            <td>{{ msg.type }}</td>
+            <td>{{ msg.content }}</td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="3">No recent messages.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<div class="print-btn">
+  <button onclick="window.print()">🖨 Print This Report</button>
+</div>
+
+</body>
+</html>
