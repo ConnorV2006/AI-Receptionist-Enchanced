@@ -3,113 +3,37 @@
 <div class="container">
   <h1>{{ clinic.name }} Dashboard</h1>
 
-  <!-- SMS Section -->
   <div class="card">
     <h2>Send SMS</h2>
     <form method="post" action="{{ url_for('send_sms', slug=clinic.slug) }}">
-      <div>
-        <label>To:</label>
-        <input type="text" name="to" placeholder="Enter phone number" required>
-      </div>
+      <label>To:</label>
+      <input type="text" name="to" required>
 
-      <div>
-        <label>Message:</label>
-        <textarea id="sms-message" name="message" rows="3" placeholder="Type your message here..." required></textarea>
-      </div>
+      <label>Message:</label>
+      <textarea id="sms-message" name="message" rows="3" required></textarea>
 
-      <!-- Quick Replies -->
       <div style="margin-top: 15px;">
         <strong style="font-size: 1.2em;">Quick Replies:</strong><br>
         {% for r in replies %}
-          <button type="button" 
-                  title="{{ r.body }}" 
-                  onclick="insertQuickReply('{{ r.body | e }}')"
-                  style="display: inline-block;
-                         margin: 5px;
-                         padding: 12px 18px;
-                         font-size: 1.1em;
-                         font-weight: bold;
-                         background-color: #f0f0f0;
-                         border: 2px solid #ccc;
-                         border-radius: 8px;
-                         cursor: pointer;">
+          <button type="button" title="{{ r.body }}"
+            onclick="insertQuickReply('{{ r.body | e }}')"
+            style="margin:5px;padding:12px 18px;font-size:1.1em;font-weight:bold;">
             {{ r.title }}
           </button>
         {% endfor %}
       </div>
 
-      <button type="submit" style="margin-top: 15px; padding: 12px 18px; font-size: 1.1em;">Send SMS</button>
+      <button type="submit" style="margin-top: 15px;">Send SMS</button>
     </form>
-  </div>
-
-  <!-- Call Section -->
-  <div class="card">
-    <h2>Place Call</h2>
-    <form method="post" action="{{ url_for('call_patient', slug=clinic.slug) }}">
-      <div>
-        <label>To:</label>
-        <input type="text" name="to" placeholder="Enter phone number" required>
-      </div>
-      <button type="submit" style="padding: 12px 18px; font-size: 1.1em;">Call</button>
-    </form>
-  </div>
-
-  <!-- Appointment Reminders -->
-  <div class="card">
-    <h2>Upcoming Appointments</h2>
-    {% if appointments %}
-      <ul>
-        {% for appt in appointments %}
-          <li>
-            {{ appt.patient.full_name }} — 
-            {{ appt.appt_time.strftime('%Y-%m-%d %H:%M') }}
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>No upcoming appointments.</p>
-    {% endif %}
-  </div>
-
-  <!-- Recent Logs -->
-  <div class="card">
-    <h2>Recent SMS</h2>
-    {% if sms_logs %}
-      <ul>
-        {% for sms in sms_logs %}
-          <li>
-            {{ sms.timestamp.strftime('%Y-%m-%d %H:%M') }} — 
-            To: {{ sms.to_number }} —
-            {{ sms.message_body }}
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>No SMS logs yet.</p>
-    {% endif %}
-  </div>
-
-  <div class="card">
-    <h2>Recent Calls</h2>
-    {% if call_logs %}
-      <ul>
-        {% for call in call_logs %}
-          <li>
-            {{ call.timestamp.strftime('%Y-%m-%d %H:%M') }} —
-            To: {{ call.to_number }} —
-            Status: {{ call.status }}
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>No call logs yet.</p>
-    {% endif %}
   </div>
 </div>
 
 <script>
 function insertQuickReply(text) {
   document.getElementById("sms-message").value = text;
+  {% if clinic.auto_focus_enabled %}
+  document.getElementById("sms-message").focus();
+  {% endif %}
 }
 </script>
 {% endblock %}
