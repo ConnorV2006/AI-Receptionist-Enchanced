@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <h1>Audit Logs</h1>
+
+  {% if logs %}
+    <table>
+      <tr>
+        <th>Time</th>
+        <th>Admin</th>
+        <th>Action</th>
+        <th>Details</th>
+      </tr>
+      {% for log in logs %}
+      <tr>
+        <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>{{ log.admin.username }}</td>
+        <td>{{ log.action }}</td>
+        <td>{{ log.details or '' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>No audit logs yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
