@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <h1>Patient Intake</h1>
+  <p>Please provide your contact details. We’ll confirm by text.</p>
+  <form method="post">
+    <label>Full Name</label>
+    <input type="text" name="full_name" required>
+
+    <label>Mobile Phone</label>
+    <input type="text" name="phone_number" placeholder="+1..." required>
+
+    <label>Preferred Appointment (optional)</label>
+    <input type="datetime-local" name="appt_time">
+
+    <button type="submit">Submit</button>
+  </form>
+</div>
+{% endblock %}
