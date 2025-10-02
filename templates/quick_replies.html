@@ -23,11 +23,25 @@
   <div class="card">
     <h2>Existing Templates</h2>
     {% if replies %}
-      <ul>
+      <table>
+        <tr>
+          <th>Title</th>
+          <th>Message</th>
+          <th>Actions</th>
+        </tr>
         {% for r in replies %}
-          <li><strong>{{ r.title }}</strong>: {{ r.body }}</li>
+        <tr>
+          <td>{{ r.title }}</td>
+          <td>{{ r.body }}</td>
+          <td>
+            <a href="{{ url_for('edit_quick_reply', slug=clinic.slug, reply_id=r.id) }}">Edit</a> |
+            <form action="{{ url_for('delete_quick_reply', slug=clinic.slug, reply_id=r.id) }}" method="post" style="display:inline;">
+              <button type="submit" onclick="return confirm('Delete this quick reply?')">Delete</button>
+            </form>
+          </td>
+        </tr>
         {% endfor %}
-      </ul>
+      </table>
     {% else %}
       <p>No quick replies defined yet.</p>
     {% endif %}
