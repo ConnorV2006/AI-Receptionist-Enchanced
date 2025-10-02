@@ -1,56 +1,54 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>{{ clinic.name }} Dashboard</h1>
 
-{% if admin %}
-  <p>Welcome, {{ admin.username }}{% if admin.is_superadmin %} (Super Admin){% endif %}.</p>
-{% endif %}
+<h2>Clinic Dashboard</h2>
 
-<h2>Recent SMS</h2>
-<ul>
-  {% for sms in sms_logs %}
-    <li>{{ sms.timestamp }} — {{ sms.to_number }}: {{ sms.message_body }}</li>
-  {% else %}
-    <li>No SMS yet.</li>
-  {% endfor %}
-</ul>
+<p>Welcome, {{ admin.username }}{% if admin.is_superadmin %} (Super Admin){% endif %}.</p>
 
-<h2>Recent Calls</h2>
-<ul>
-  {% for call in call_logs %}
-    <li>{{ call.timestamp }} — {{ call.from_number }} → {{ call.to_number }} ({{ call.status }})</li>
-  {% else %}
-    <li>No calls yet.</li>
-  {% endfor %}
-</ul>
+<hr>
 
-<h2>Upcoming Appointments</h2>
-<ul>
-  {% for appt in appointments %}
-    <li>{{ appt.appt_time.strftime("%Y-%m-%d %I:%M %p") }} — {{ appt.patient.full_name }}</li>
-  {% else %}
-    <li>No appointments scheduled.</li>
-  {% endfor %}
-</ul>
+<h3>📋 Patients</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Phone</th>
+      <th>Upcoming Appointment</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for patient in patients %}
+    <tr>
+      <td>{{ patient.name }}</td>
+      <td>{{ patient.phone }}</td>
+      <td>
+        {% if patient.appointments %}
+          {{ patient.appointments[0].date.strftime("%B %d, %Y %I:%M %p") }}
+        {% else %}
+          None
+        {% endif %}
+      </td>
+      <td>
+        <!-- Print Summary button -->
+        <a class="btn" href="{{ url_for('patient_print', patient_id=patient.id) }}" target="_blank">
+          🖨 Print Summary
+        </a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
 
-<h2>Quick Replies</h2>
-<ul>
-  {% for reply in replies %}
-    <li><strong>{{ reply.title }}</strong>: {{ reply.body }}</li>
-  {% else %}
-    <li>No quick replies defined.</li>
-  {% endfor %}
-</ul>
+<hr>
 
-{% if admin %}
-  <form method="post" action="{{ url_for('send_sms', slug=clinic.slug) }}">
-    <h3>Send SMS</h3>
-    <label>To:</label><br>
-    <input type="text" name="to" placeholder="+1..."><br>
-    <label>Message:</label><br>
-    <textarea name="message"></textarea><br>
-    <button type="submit">Send SMS</button>
-  </form>
-{% endif %}
+<h3>⚡ Quick Actions</h3>
+<div>
+  <a class="btn" href="{{ url_for('send_sms', slug=clinic.slug) }}">Send SMS</a>
+  <a class="btn" href="{{ url_for('view_reports') }}">View Reports</a>
+  {% if admin.is_superadmin %}
+    <a class="btn" href="{{ url_for('edit_clinic', slug=clinic.slug) }}">Edit Clinic Info</a>
+  {% endif %}
+</div>
 
 {% endblock %}
