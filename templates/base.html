@@ -1,58 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>{{ clinic.name if clinic else "AI Receptionist" }}</title>
+  <meta charset="UTF-8">
+  <title>AI Receptionist</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-  <style>
-    :root { --brand: {{ clinic.primary_color if clinic and clinic.primary_color else "#1f6feb" }}; }
-    header { border-bottom: 3px solid var(--brand); padding: 8px 0; margin-bottom: 16px; }
-    nav a { margin-right: 10px; color: var(--brand); text-decoration: none; font-weight: 600; }
-    .flashes li.error { color: #b00020; }
-    .flashes li.success { color: #0a7a2d; }
-  </style>
 </head>
 <body>
-  <header>
-    <div style="display:flex;align-items:center;gap:12px;">
-      {% if clinic and clinic.logo_url %}
-        <img src="{{ clinic.logo_url }}" alt="Logo" style="height:36px;">
-      {% endif %}
-      <strong>{{ clinic.name if clinic else "AI Receptionist" }}</strong>
-    </div>
-    <nav>
-      <a href="{{ url_for('dashboard') }}">Home</a>
-      {% if clinic %}
-        <a href="{{ url_for('clinic_dashboard', slug=clinic.slug) }}">Dashboard</a>
-        <a href="{{ url_for('clinic_settings', slug=clinic.slug) }}">Settings</a>
-        {% if admin and admin.is_superadmin %}
-          <a href="{{ url_for('clinic_manager', slug=clinic.slug) }}">Manage Clinic</a>
-          <a href="{{ url_for('reports') }}">Reports</a>
-        {% endif %}
-      {% endif %}
 
-      {% if admin %}
-        <a href="{{ url_for('clock_in') }}">Clock In</a>
-        <a href="{{ url_for('clock_out') }}">Clock Out</a>
-        <a href="{{ url_for('logout') }}">Logout</a>
-      {% else %}
-        <a href="{{ url_for('login') }}">Login</a>
-      {% endif %}
-    </nav>
-  </header>
+  <!-- Sidebar Navigation -->
+  <nav>
+    <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a>
+    <a href="{{ url_for('reports') }}">📊 Reports</a>
+    <a href="{{ url_for('manage_admins') }}">👥 Manage Staff</a>
+    <a href="{{ url_for('logout') }}">🚪 Logout</a>
+  </nav>
 
-  <main>
+  <!-- Main Content -->
+  <div class="content">
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <ul class="flashes">
-          {% for category, message in messages %}
-            <li class="{{ category }}">{{ message }}</li>
-          {% endfor %}
-        </ul>
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
       {% endif %}
     {% endwith %}
 
+    <!-- Page Content -->
     {% block content %}{% endblock %}
-  </main>
+  </div>
+
+  <footer>
+    <p>AI Receptionist SaaS &copy; {{ now().year }}</p>
+  </footer>
 </body>
 </html>
