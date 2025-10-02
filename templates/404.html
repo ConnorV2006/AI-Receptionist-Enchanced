@@ -1,12 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>🔍 Page Not Found</h2>
-<p>The page you’re looking for doesn’t exist or may have been moved.</p>
-
-<p style="margin-top:10px;">
-  Please check the address or return to your dashboard.
-</p>
-
-<a href="{{ url_for('dashboard') }}">⬅️ Return to Dashboard</a>
+<div style="text-align:center; margin-top:50px;">
+  <div style="font-size:60px;">❓</div>
+  <h2>404 – Page Not Found</h2>
+  <p>The page you’re looking for doesn’t exist.</p>
+  <a href="{{ url_for('dashboard') }}">⬅️ Back to Dashboard</a>
+</div>
 {% endblock %}
