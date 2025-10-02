@@ -2,14 +2,49 @@
 {% block content %}
 <h1>Reports & Audit Logs</h1>
 
+<!-- Weekly Summary -->
+<h2>Weekly Summary (Last 7 Days)</h2>
+<table border="1" cellpadding="6" cellspacing="0">
+  <tr><th>Staff</th><th>Total Hours</th></tr>
+  {% for user, hours in weekly_hours %}
+  <tr>
+    <td>{{ user }}</td>
+    <td>{{ "%.2f"|format(hours or 0) }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="2">No hours logged yet.</td></tr>
+  {% endfor %}
+</table>
+
+<!-- Filter Form -->
+<h2>Filter Shifts</h2>
+<form method="post">
+  <label for="staff_id">Staff:</label>
+  <select name="staff_id">
+    <option value="all">All</option>
+    {% for staff in all_staff %}
+      <option value="{{ staff.id }}">{{ staff.username }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="date_from">From:</label>
+  <input type="date" name="date_from">
+
+  <label for="date_to">To:</label>
+  <input type="date" name="date_to">
+
+  <button type="submit">Filter</button>
+</form>
+
+<!-- Export Button -->
+<p style="margin-top:10px;">
+  <a href="{{ url_for('export_reports') }}" class="button">📥 Export to CSV</a>
+</p>
+
+<!-- Shifts Table -->
 <h2>Staff Shifts</h2>
 <table border="1" cellpadding="6" cellspacing="0">
-  <tr>
-    <th>Staff</th>
-    <th>Clock In</th>
-    <th>Clock Out</th>
-    <th>Hours</th>
-  </tr>
+  <tr><th>Staff</th><th>Clock In</th><th>Clock Out</th><th>Hours</th></tr>
   {% for shift in shifts %}
   <tr>
     <td>{{ shift.admin.username }}</td>
@@ -21,27 +56,17 @@
         Active
       {% endif %}
     </td>
-    <td>
-      {% if shift.duration_hours %}
-        {{ shift.duration_hours }}
-      {% else %}
-        -
-      {% endif %}
-    </td>
+    <td>{{ shift.duration_hours if shift.duration_hours else "-" }}</td>
   </tr>
   {% else %}
-  <tr><td colspan="4">No shifts logged yet.</td></tr>
+  <tr><td colspan="4">No shifts logged.</td></tr>
   {% endfor %}
 </table>
 
+<!-- Audit Logs -->
 <h2 style="margin-top:30px;">Recent Audit Logs</h2>
 <table border="1" cellpadding="6" cellspacing="0">
-  <tr>
-    <th>Time</th>
-    <th>Staff</th>
-    <th>Action</th>
-    <th>Details</th>
-  </tr>
+  <tr><th>Time</th><th>Staff</th><th>Action</th><th>Details</th></tr>
   {% for log in logs %}
   <tr>
     <td>{{ log.timestamp.strftime("%Y-%m-%d %I:%M %p") }}</td>
