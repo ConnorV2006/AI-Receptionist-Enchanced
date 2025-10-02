@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Reports & Audit Logs</h1>
+
+<h2>Staff Shifts</h2>
+<table border="1" cellpadding="6" cellspacing="0">
+  <tr>
+    <th>Staff</th>
+    <th>Clock In</th>
+    <th>Clock Out</th>
+    <th>Hours</th>
+  </tr>
+  {% for shift in shifts %}
+  <tr>
+    <td>{{ shift.admin.username }}</td>
+    <td>{{ shift.clock_in.strftime("%Y-%m-%d %I:%M %p") }}</td>
+    <td>
+      {% if shift.clock_out %}
+        {{ shift.clock_out.strftime("%Y-%m-%d %I:%M %p") }}
+      {% else %}
+        Active
+      {% endif %}
+    </td>
+    <td>
+      {% if shift.duration_hours %}
+        {{ shift.duration_hours }}
+      {% else %}
+        -
+      {% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="4">No shifts logged yet.</td></tr>
+  {% endfor %}
+</table>
+
+<h2 style="margin-top:30px;">Recent Audit Logs</h2>
+<table border="1" cellpadding="6" cellspacing="0">
+  <tr>
+    <th>Time</th>
+    <th>Staff</th>
+    <th>Action</th>
+    <th>Details</th>
+  </tr>
+  {% for log in logs %}
+  <tr>
+    <td>{{ log.timestamp.strftime("%Y-%m-%d %I:%M %p") }}</td>
+    <td>{{ log.admin.username if log.admin else "Unknown" }}</td>
+    <td>{{ log.action }}</td>
+    <td>{{ log.details or "" }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="4">No audit logs yet.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}
