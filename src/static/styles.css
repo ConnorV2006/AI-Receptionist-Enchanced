@@ -1,36 +1,154 @@
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f9f9f9;
+/* Global Reset */
+* {
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
 }
 
+/* Body & Layout */
+body {
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f6f9;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Sidebar Navigation */
 nav {
-    background: #333;
-    padding: 10px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 220px;
+    background: #2c3e50;
+    padding-top: 30px;
+    display: flex;
+    flex-direction: column;
 }
 
 nav a {
-    color: #fff;
-    margin-right: 15px;
+    color: #ecf0f1;
+    padding: 12px 20px;
     text-decoration: none;
+    font-weight: 500;
+    transition: background 0.3s ease;
 }
 
 nav a:hover {
-    text-decoration: underline;
+    background: #34495e;
 }
 
+/* Main Content */
 .content {
+    margin-left: 240px;
     padding: 20px;
 }
 
-.flash {
-    margin: 10px;
-    padding: 10px;
-    border-radius: 5px;
+/* Dashboard Header */
+h1, h2, h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
 }
 
-.flash.success { background: #d4edda; color: #155724; }
-.flash.error   { background: #f8d7da; color: #721c24; }
-.flash.warning { background: #fff3cd; color: #856404; }
-.flash.info    { background: #d1ecf1; color: #0c5460; }
+/* Card Layout */
+.card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.card h2 {
+    margin-bottom: 15px;
+    font-size: 20px;
+    color: #34495e;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+table thead {
+    background: #2c3e50;
+    color: #fff;
+}
+
+table th, table td {
+    padding: 12px 15px;
+    text-align: left;
+}
+
+table tr:nth-child(even) {
+    background: #f9f9f9;
+}
+
+table tr:hover {
+    background: #f1f1f1;
+}
+
+/* Buttons */
+.button, button {
+    display: inline-block;
+    padding: 10px 18px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s ease;
+}
+
+.button:hover, button:hover {
+    background: #2980b9;
+}
+
+/* Flash Messages */
+.flash {
+    padding: 12px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.flash.success { background: #2ecc71; color: #fff; }
+.flash.error   { background: #e74c3c; color: #fff; }
+.flash.warning { background: #f39c12; color: #fff; }
+.flash.info    { background: #3498db; color: #fff; }
+
+/* Forms */
+form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+form input, form select, form textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+form input:focus, form select:focus, form textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 4px rgba(52,152,219,0.5);
+}
+
+/* Footer */
+footer {
+    margin-top: 30px;
+    text-align: center;
+    color: #7f8c8d;
+    font-size: 13px;
+}
