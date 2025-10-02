@@ -1,17 +1,27 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Two-Factor Authentication</h2>
-<p>A 6-digit verification code has been sent to your phone. Please enter it below to complete login.</p>
+<div style="text-align:center; margin-top:50px;">
+  <div style="font-size:60px;">📱</div>
+  <h2>Two-Factor Authentication</h2>
+  <p style="margin-bottom:20px;">Enter the 6-digit code sent to your phone.</p>
 
-<form method="post">
-  <label for="code">Verification Code:</label>
-  <input type="text" id="code" name="code" maxlength="6" required>
-  
-  <button type="submit">Verify</button>
-</form>
+  <form method="post" style="display:inline-block; text-align:left;">
+    <div style="margin-bottom:10px;">
+      <label for="code">Verification Code</label><br>
+      <input type="text" id="code" name="code" maxlength="6" required style="width:200px; padding:6px; border:1px solid #ccc; border-radius:6px;">
+    </div>
 
-<p style="margin-top:10px; font-size:0.9em; color:gray;">
-  Didn’t receive it? Contact your admin or request re-send.
-</p>
+    <div style="text-align:center; margin-top:15px;">
+      <button type="submit" style="padding:10px 20px; background:#800000; color:white; border:none; border-radius:8px; cursor:pointer;">
+        Verify
+      </button>
+    </div>
+  </form>
+
+  <p style="margin-top:20px; font-size:0.9em; color:gray;">
+    Didn’t receive it?  
+    <a href="{{ url_for('resend_code') }}" style="color:#800000;">Resend Code</a>
+  </p>
+</div>
 {% endblock %}
