@@ -36,22 +36,14 @@ class Clinic(db.Model):
     twilio_number = db.Column(db.String(20))
     twilio_sid = db.Column(db.String(120))
     twilio_token = db.Column(db.String(120))
+    auto_focus_enabled = db.Column(db.Boolean, default=False)  # NEW FIELD
 
-class ApiKey(db.Model):
+class QuickReplyTemplate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     clinic_id = db.Column(db.Integer, db.ForeignKey('clinic.id'), nullable=False)
-    key = db.Column(db.String(64), unique=True, nullable=False)
-    description = db.Column(db.String(255))
-    active = db.Column(db.Boolean, default=True)
-
-class CallLog(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    clinic_id = db.Column(db.Integer, db.ForeignKey('clinic.id'), nullable=False)
-    from_number = db.Column(db.String(20))
-    to_number = db.Column(db.String(20))
-    duration = db.Column(db.Integer)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(50))
+    title = db.Column(db.String(100), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    clinic = db.relationship('Clinic', backref=db.backref('quick_replies', lazy=True))
 
 class SmsLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -62,12 +54,20 @@ class SmsLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(50))
 
+class CallLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    clinic_id = db.Column(db.Integer, db.ForeignKey('clinic.id'), nullable=False)
+    from_number = db.Column(db.String(20))
+    to_number = db.Column(db.String(20))
+    duration = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(50))
+
 class Patient(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     clinic_id = db.Column(db.Integer, db.ForeignKey('clinic.id'), nullable=False)
     full_name = db.Column(db.String(120), nullable=False)
     phone_number = db.Column(db.String(32), nullable=False)
-
     clinic = db.relationship('Clinic', backref=db.backref('patients', lazy=True))
 
 class Appointment(db.Model):
@@ -76,26 +76,8 @@ class Appointment(db.Model):
     patient_id = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
     appt_time = db.Column(db.DateTime, nullable=False)
     notes = db.Column(db.String(255))
-
     clinic = db.relationship('Clinic', backref=db.backref('appointments', lazy=True))
     patient = db.relationship('Patient', backref=db.backref('appointments', lazy=True))
-
-class AuditLog(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=False)
-    action = db.Column(db.String(255), nullable=False)
-    details = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-
-    admin = db.relationship('Admin', backref=db.backref('audit_logs', lazy=True))
-
-class QuickReplyTemplate(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    clinic_id = db.Column(db.Integer, db.ForeignKey('clinic.id'), nullable=False)
-    title = db.Column(db.String(100), nullable=False)
-    body = db.Column(db.Text, nullable=False)
-
-    clinic = db.relationship('Clinic', backref=db.backref('quick_replies', lazy=True))
 
 # -------------------------------------------------
 # Helpers
@@ -107,27 +89,6 @@ def get_twilio_client():
 
 def get_twilio_from_number(clinic):
     return clinic.twilio_number or os.getenv("TWILIO_NUMBER")
-
-def log_action(admin, action, details=""):
-    entry = AuditLog(
-        admin_id=admin.id,
-        action=action,
-        details=details,
-        timestamp=datetime.utcnow()
-    )
-    db.session.add(entry)
-    db.session.commit()
-
-def expand_shortcodes(clinic, text):
-    """Replace ::shortcode with matching quick reply body"""
-    if not text:
-        return text
-    replies = QuickReplyTemplate.query.filter_by(clinic_id=clinic.id).all()
-    for r in replies:
-        shortcode = f"::{r.title.lower().replace(' ', '')}"
-        if shortcode in text.lower():
-            text = text.replace(shortcode, r.body)
-    return text
 
 # -------------------------------------------------
 # Routes
@@ -151,16 +112,12 @@ def send_sms(slug):
     to_number = request.form.get("to")
     body = request.form.get("message", "").strip()
 
-    # Expand inline quick reply shortcodes like ::late
-    body = expand_shortcodes(clinic, body)
-
     if not to_number or not body:
         flash("Phone number and message are required.", "error")
         return redirect(url_for("clinic_dashboard", slug=slug))
 
     client = get_twilio_client()
     from_number = get_twilio_from_number(clinic)
-
     client.messages.create(body=body, from_=from_number, to=to_number)
 
     sms_log = SmsLog(
@@ -184,7 +141,6 @@ def call_patient(slug):
 
     client = get_twilio_client()
     from_number = get_twilio_from_number(clinic)
-
     client.calls.create(
         twiml='<Response><Say>Hello, this is your clinic receptionist calling with a reminder.</Say></Response>',
         from_=from_number,
@@ -205,46 +161,12 @@ def call_patient(slug):
     flash("Call initiated successfully.", "success")
     return redirect(url_for("clinic_dashboard", slug=slug))
 
-@app.route("/admins/audit-logs")
-def view_audit_logs():
-    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(100).all()
-    return render_template("audit_logs.html", logs=logs)
-
-@app.route("/clinics/<slug>/quick-replies", methods=["GET", "POST"])
-def manage_quick_replies(slug):
+@app.route("/clinics/<slug>/settings", methods=["GET", "POST"])
+def clinic_settings(slug):
     clinic = Clinic.query.filter_by(slug=slug).first_or_404()
     if request.method == "POST":
-        title = request.form.get("title")
-        body = request.form.get("body")
-        if title and body:
-            qr = QuickReplyTemplate(clinic_id=clinic.id, title=title, body=body)
-            db.session.add(qr)
-            db.session.commit()
-            flash("Quick reply added.", "success")
-        return redirect(url_for("manage_quick_replies", slug=slug))
-    replies = QuickReplyTemplate.query.filter_by(clinic_id=clinic.id).all()
-    return render_template("quick_replies.html", clinic=clinic, replies=replies)
-
-@app.route("/clinics/<slug>/quick-replies/<int:reply_id>/edit", methods=["GET", "POST"])
-def edit_quick_reply(slug, reply_id):
-    clinic = Clinic.query.filter_by(slug=slug).first_or_404()
-    reply = QuickReplyTemplate.query.filter_by(id=reply_id, clinic_id=clinic.id).first_or_404()
-
-    if request.method == "POST":
-        reply.title = request.form.get("title")
-        reply.body = request.form.get("body")
+        clinic.auto_focus_enabled = bool(request.form.get("auto_focus_enabled"))
         db.session.commit()
-        flash("Quick reply updated.", "success")
-        return redirect(url_for("manage_quick_replies", slug=slug))
-
-    return render_template("edit_quick_reply.html", clinic=clinic, reply=reply)
-
-@app.route("/clinics/<slug>/quick-replies/<int:reply_id>/delete", methods=["POST"])
-def delete_quick_reply(slug, reply_id):
-    clinic = Clinic.query.filter_by(slug=slug).first_or_404()
-    reply = QuickReplyTemplate.query.filter_by(id=reply_id, clinic_id=clinic.id).first_or_404()
-
-    db.session.delete(reply)
-    db.session.commit()
-    flash("Quick reply deleted.", "info")
-    return redirect(url_for("manage_quick_replies", slug=slug))
+        flash("Settings updated.", "success")
+        return redirect(url_for("clinic_settings", slug=slug))
+    return render_template("clinic_settings.html", clinic=clinic)
