@@ -1,6 +1,11 @@
 import os
-from app import app, db, Admin   # ✅ Import Admin directly from app.py
+import sys
 from werkzeug.security import generate_password_hash
+
+# Ensure the current directory is in Python's path
+sys.path.append(os.path.dirname(__file__))
+
+from app import app, db, Admin   # ✅ app.py is right next to this script
 
 def seed_admin(username="admin", password="admin123", is_superadmin=True, clinic_id=None):
     with app.app_context():   # ensures DB queries run inside Flask's context
