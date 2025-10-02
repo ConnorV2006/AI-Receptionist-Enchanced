@@ -1,50 +1,46 @@
 {% extends "base.html" %}
+
 {% block content %}
+<div style="text-align:center; margin-top:30px;">
 
-<div class="card">
-  <h2>Welcome, {{ admin.username }}!</h2>
-  {% if admin.role == "superadmin" %}
-    <p>You are logged in as <strong>Super Admin</strong>.</p>
-  {% elif admin.role == "manager" %}
-    <p>You are logged in as <strong>Manager</strong>.</p>
-  {% else %}
-    <p>You are logged in as <strong>Staff</strong>.</p>
-  {% endif %}
+  <h2>📊 Dashboard</h2>
+  <p style="color:gray;">Welcome, {{ admin.username }}{% if admin.is_superadmin %} (Super Admin){% endif %}</p>
+
+  <!-- Quick Actions -->
+  <div style="display:flex; justify-content:center; flex-wrap:wrap; margin-top:20px; gap:20px;">
+
+    <a href="{{ url_for('clinic_dashboard', slug='default') if admin.is_superadmin else '#' }}" 
+       style="flex:1 1 200px; max-width:220px; text-align:center; background:#800000; color:white; padding:20px; border-radius:12px; text-decoration:none; font-weight:bold;">
+      🏥 Clinic Dashboard
+    </a>
+
+    {% if admin.is_superadmin %}
+    <a href="{{ url_for('admins_list') }}" 
+       style="flex:1 1 200px; max-width:220px; text-align:center; background:#4a4a4a; color:white; padding:20px; border-radius:12px; text-decoration:none; font-weight:bold;">
+      👥 Manage Admins
+    </a>
+    {% endif %}
+
+    <a href="{{ url_for('setup_route') if admin.is_superadmin else '#' }}" 
+       style="flex:1 1 200px; max-width:220px; text-align:center; background:#005f73; color:white; padding:20px; border-radius:12px; text-decoration:none; font-weight:bold;">
+      ⚙️ Settings
+    </a>
+
+    <a href="{{ url_for('logout') }}" 
+       style="flex:1 1 200px; max-width:220px; text-align:center; background:#9b2226; color:white; padding:20px; border-radius:12px; text-decoration:none; font-weight:bold;">
+      🚪 Logout
+    </a>
+  </div>
+
+  <!-- Analytics Section -->
+  <div style="margin-top:40px; text-align:left; max-width:800px; margin-left:auto; margin-right:auto;">
+    <h3>📈 Quick Analytics</h3>
+    <ul style="list-style:none; padding:0; margin-top:10px;">
+      <li>📞 Calls Today: <strong>{{ analytics.calls_today }}</strong></li>
+      <li>💬 SMS Sent: <strong>{{ analytics.sms_today }}</strong></li>
+      <li>👩‍⚕️ Active Clinics: <strong>{{ analytics.clinics_count }}</strong></li>
+    </ul>
+  </div>
+
 </div>
-
-<div class="card">
-  <h2>Quick Actions</h2>
-  <a href="{{ url_for('reports') }}" class="button">📊 View Reports</a>
-  <a href="{{ url_for('manage_admins') }}" class="button">👥 Manage Staff</a>
-  <a href="#" class="button">📩 Send SMS</a>
-</div>
-
-<div class="card">
-  <h2>Recent Activity</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Time</th>
-        <th>User</th>
-        <th>Action</th>
-        <th>Details</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% if logs %}
-        {% for log in logs %}
-          <tr>
-            <td>{{ log.timestamp.strftime("%Y-%m-%d %H:%M") }}</td>
-            <td>{{ log.admin.username if log.admin else "Unknown" }}</td>
-            <td>{{ log.action }}</td>
-            <td>{{ log.details or "" }}</td>
-          </tr>
-        {% endfor %}
-      {% else %}
-        <tr><td colspan="4">No recent activity yet.</td></tr>
-      {% endif %}
-    </tbody>
-  </table>
-</div>
-
 {% endblock %}
