@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <h1>Manage Clinic Information</h1>
+  <form method="post">
+    <label>Clinic Name:</label>
+    <input type="text" name="name" value="{{ clinic.name }}" required><br><br>
+
+    <label>Address:</label>
+    <input type="text" name="address" value="{{ clinic.address or '' }}"><br><br>
+
+    <label>City:</label>
+    <input type="text" name="city" value="{{ clinic.city or '' }}"><br><br>
+
+    <label>State:</label>
+    <input type="text" name="state" value="{{ clinic.state or '' }}"><br><br>
+
+    <label>Zip Code:</label>
+    <input type="text" name="zip" value="{{ clinic.zip or '' }}"><br><br>
+
+    <label>Twilio Phone Number:</label>
+    <input type="text" name="twilio_number" value="{{ clinic.twilio_number or '' }}"><br><br>
+
+    <button type="submit">Save Changes</button>
+  </form>
+</div>
+{% endblock %}
