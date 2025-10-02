@@ -1,31 +1,33 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>AI Receptionist</title>
+  <meta charset="UTF-8">
+  <title>{{ clinic.name if clinic else "AI Receptionist" }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-  <nav>
-    <a href="{{ url_for('dashboard') }}">Home</a>
-    {% if clinic %}
-      |
-      <a href="{{ url_for('clinic_dashboard', slug=clinic.slug) }}">Dashboard</a>
-      |
-      <a href="{{ url_for('clinic_settings', slug=clinic.slug) }}">Settings</a>
-    {% endif %}
-  </nav>
+  <header>
+    <nav style="margin-bottom: 20px;">
+      <a href="{{ url_for('dashboard') }}">Home</a>
+      {% if clinic %}
+        | <a href="{{ url_for('clinic_dashboard', slug=clinic.slug) }}">Dashboard</a>
+        | <a href="{{ url_for('clinic_settings', slug=clinic.slug) }}">Settings</a>
+      {% endif %}
+    </nav>
+  </header>
 
-  <div class="content">
+  <main>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <ul>
+        <ul class="flashes">
         {% for category, message in messages %}
-          <li><strong>{{ category.title() }}:</strong> {{ message }}</li>
+          <li class="{{ category }}">{{ message }}</li>
         {% endfor %}
         </ul>
       {% endif %}
     {% endwith %}
-
+    
     {% block content %}{% endblock %}
-  </div>
+  </main>
 </body>
 </html>
