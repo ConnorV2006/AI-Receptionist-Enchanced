@@ -1,106 +1,40 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container">
-
   <h1>{{ clinic.name }} Dashboard</h1>
-  <p>Welcome to the clinic dashboard for <strong>{{ clinic.slug }}</strong>.</p>
 
-  <!-- Flash messages -->
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <ul class="flashes">
-        {% for category, message in messages %}
-          <li class="{{ category }}">{{ message }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-  {% endwith %}
-
-  <!-- Send SMS -->
-  <div class="card" style="margin-bottom:1.5rem; padding:1rem;">
+  <div class="card">
     <h2>Send SMS</h2>
-    <form action="{{ url_for('send_sms', slug=clinic.slug) }}" method="post">
-      <div>
-        <label for="to">To Number</label>
-        <input type="text" name="to" placeholder="+15551234567" required>
+    <form method="post" action="{{ url_for('send_sms', slug=clinic.slug) }}">
+      <label>To:</label>
+      <input type="text" name="to" required>
+
+      <label>Message:</label>
+      <textarea id="sms-message" name="message" rows="3" required></textarea>
+
+      <div style="margin-top: 15px;">
+        <strong style="font-size: 1.2em;">Quick Replies:</strong><br>
+        {% for r in replies %}
+          <button type="button" 
+            title="{{ r.body }}" 
+            onclick="insertQuickReply('{{ r.body | e }}')"
+            style="margin:5px;padding:12px 18px;font-size:1.1em;font-weight:bold;">
+            {{ r.title }}
+          </button>
+        {% endfor %}
       </div>
-      <div>
-        <label for="message">Message</label>
-        <textarea name="message" rows="2" placeholder="Your message..." required></textarea>
-      </div>
-      <button type="submit">Send SMS</button>
+
+      <button type="submit" style="margin-top: 15px;">Send SMS</button>
     </form>
   </div>
-
-  <!-- Place Call -->
-  <div class="card" style="margin-bottom:1.5rem; padding:1rem;">
-    <h2>Place Call</h2>
-    <form action="{{ url_for('call_patient', slug=clinic.slug) }}" method="post">
-      <div>
-        <label for="to">To Number</label>
-        <input type="text" name="to" placeholder="+15551234567" required>
-      </div>
-      <button type="submit">Call</button>
-    </form>
-  </div>
-
-  <!-- Upcoming Appointments -->
-  <div class="card" style="margin-bottom:1.5rem; padding:1rem;">
-    <h2>Upcoming Appointments</h2>
-    {% if appointments %}
-      <table border="1" cellpadding="6" cellspacing="0">
-        <tr>
-          <th>Patient</th>
-          <th>Time</th>
-          <th>Notes</th>
-        </tr>
-        {% for appt in appointments %}
-        <tr>
-          <td>{{ appt.patient.full_name }}</td>
-          <td>{{ appt.appt_time.strftime('%Y-%m-%d %H:%M') }}</td>
-          <td>{{ appt.notes or '' }}</td>
-        </tr>
-        {% endfor %}
-      </table>
-    {% else %}
-      <p>No upcoming appointments.</p>
-    {% endif %}
-  </div>
-
-  <!-- Recent SMS Logs -->
-  <div class="card" style="margin-bottom:1.5rem; padding:1rem;">
-    <h2>Recent SMS Logs</h2>
-    {% if sms_logs %}
-      <ul>
-        {% for sms in sms_logs %}
-          <li>
-            <strong>{{ sms.timestamp.strftime('%Y-%m-%d %H:%M') }}</strong>  
-            {{ sms.to_number }} &raquo; {{ sms.message_body|truncate(50) }}
-            <em>({{ sms.status }})</em>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>No SMS activity yet.</p>
-    {% endif %}
-  </div>
-
-  <!-- Recent Call Logs -->
-  <div class="card" style="margin-bottom:1.5rem; padding:1rem;">
-    <h2>Recent Call Logs</h2>
-    {% if call_logs %}
-      <ul>
-        {% for call in call_logs %}
-          <li>
-            <strong>{{ call.timestamp.strftime('%Y-%m-%d %H:%M') }}</strong>  
-            {{ call.to_number }} ({{ call.status }})
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>No call activity yet.</p>
-    {% endif %}
-  </div>
-
 </div>
+
+<script>
+function insertQuickReply(text) {
+  document.getElementById("sms-message").value = text;
+  {% if clinic.auto_focus_enabled %}
+  document.getElementById("sms-message").focus();
+  {% endif %}
+}
+</script>
 {% endblock %}
