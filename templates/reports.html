@@ -36,9 +36,10 @@
   <button type="submit">Filter</button>
 </form>
 
-<!-- Export Button -->
+<!-- Export Buttons -->
 <p style="margin-top:10px;">
-  <a href="{{ url_for('export_reports') }}" class="button">📥 Export to CSV</a>
+  <a href="{{ url_for('export_csv') }}" class="button">📥 Export CSV</a>
+  <a href="{{ url_for('export_excel') }}" class="button">📊 Export Excel</a>
 </p>
 
 <!-- Shifts Table -->
