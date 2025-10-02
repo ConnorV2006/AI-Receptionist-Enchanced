@@ -1,45 +1,128 @@
 {% extends "base.html" %}
-{% block title %}{{ clinic.name }} - AI Receptionist{% endblock %}
 {% block content %}
-<h1>{{ clinic.name }} Clinic Dashboard</h1>
-<p>Slug: {{ clinic.slug }}</p>
+<div class="container">
 
-<p><a href="{{ url_for('api_keys', slug=clinic.slug) }}">Manage API Keys</a></p>
+  <h1>{{ clinic.name }} Dashboard</h1>
+  <p>Welcome to the clinic dashboard for <strong>{{ clinic.slug }}</strong>.</p>
 
-<h2>Recent SMS Logs</h2>
-{% if sms_logs %}
-<table>
-    <tr><th>Date</th><th>From</th><th>To</th><th>Body</th><th>Status</th></tr>
-    {% for log in sms_logs %}
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flashes">
+        {% for category, message in messages %}
+          <li class="{{ category }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Send SMS -->
+  <div class="card">
+    <h2>Send SMS</h2>
+    <form action="{{ url_for('send_sms', slug=clinic.slug) }}" method="post">
+      <div>
+        <label>To Number</label>
+        <input type="text" name="to" placeholder="+15551234567" required>
+      </div>
+
+      <!-- Quick Reply Templates Dropdown -->
+      <div>
+        <label>Quick Replies</label>
+        <select id="quickReplySelect" onchange="insertQuickReply(this.value)">
+          <option value="">-- Choose --</option>
+          {% for r in replies %}
+            <option value="{{ r.body }}">{{ r.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label>Message</label>
+        <textarea name="message" id="smsMessage" rows="3" placeholder="Your message..." required></textarea>
+      </div>
+
+      <button type="submit">Send SMS</button>
+    </form>
+  </div>
+
+  <!-- Place Call -->
+  <div class="card">
+    <h2>Place Call</h2>
+    <form action="{{ url_for('call_patient', slug=clinic.slug) }}" method="post">
+      <div>
+        <label>To Number</label>
+        <input type="text" name="to" placeholder="+15551234567" required>
+      </div>
+      <button type="submit">Call</button>
+    </form>
+  </div>
+
+  <!-- Upcoming Appointments -->
+  <div class="card">
+    <h2>Upcoming Appointments</h2>
+    {% if appointments %}
+      <table>
         <tr>
-            <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-            <td>{{ log.from_number }}</td>
-            <td>{{ log.to_number }}</td>
-            <td>{{ log.body[:50] }}{% if log.body|length > 50 %}…{% endif %}</td>
-            <td>{{ log.status or '-' }}</td>
+          <th>Patient</th>
+          <th>Time</th>
+          <th>Notes</th>
         </tr>
-    {% endfor %}
-</table>
-{% else %}
-    <p>No SMS logs available.</p>
-{% endif %}
-
-<h2>Recent Call Logs</h2>
-{% if call_logs %}
-<table>
-    <tr><th>Date</th><th>From</th><th>To</th><th>Status</th><th>Duration (s)</th></tr>
-    {% for log in call_logs %}
+        {% for appt in appointments %}
         <tr>
-            <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-            <td>{{ log.from_number }}</td>
-            <td>{{ log.to_number }}</td>
-            <td>{{ log.status or '-' }}</td>
-            <td>{{ log.duration or '-' }}</td>
+          <td>{{ appt.patient.full_name }}</td>
+          <td>{{ appt.appt_time.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>{{ appt.notes or '' }}</td>
         </tr>
-    {% endfor %}
-</table>
-{% else %}
-    <p>No call logs available.</p>
-{% endif %}
+        {% endfor %}
+      </table>
+    {% else %}
+      <p>No upcoming appointments.</p>
+    {% endif %}
+  </div>
 
+  <!-- Recent SMS Logs -->
+  <div class="card">
+    <h2>Recent SMS Logs</h2>
+    {% if sms_logs %}
+      <ul>
+        {% for sms in sms_logs %}
+          <li>
+            <strong>{{ sms.timestamp.strftime('%Y-%m-%d %H:%M') }}</strong>  
+            {{ sms.to_number }} → {{ sms.message_body|truncate(50) }}
+            <em>({{ sms.status }})</em>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No SMS activity yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- Recent Call Logs -->
+  <div class="card">
+    <h2>Recent Call Logs</h2>
+    {% if call_logs %}
+      <ul>
+        {% for call in call_logs %}
+          <li>
+            <strong>{{ call.timestamp.strftime('%Y-%m-%d %H:%M') }}</strong>  
+            {{ call.to_number }} ({{ call.status }})
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No call activity yet.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Quick Reply Insert Script -->
+<script>
+function insertQuickReply(text) {
+  if (text) {
+    document.getElementById("smsMessage").value = text;
+  }
+}
+</script>
 {% endblock %}
