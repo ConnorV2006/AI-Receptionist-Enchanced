@@ -13,11 +13,11 @@ from werkzeug.security import generate_password_hash
 def seed_admin(username="admin", password="admin123", is_superadmin=True, clinic_id=None):
     existing = Admin.query.filter_by(username=username).first()
     if existing:
+        print(f"⚡ Skipped admin seeding: '{username}' already exists (updated settings).")
         existing.password_hash = generate_password_hash(password)
         existing.is_superadmin = is_superadmin
         existing.clinic_id = clinic_id
         db.session.commit()
-        print(f"🔄 Updated admin '{username}'")
     else:
         admin = Admin(
             username=username,
@@ -33,12 +33,12 @@ def seed_admin(username="admin", password="admin123", is_superadmin=True, clinic
 def seed_clinic(slug="test-clinic", name="Test Clinic", twilio_number="+1234567890", twilio_sid="dummySID", twilio_token="dummyTOKEN"):
     existing = Clinic.query.filter_by(slug=slug).first()
     if existing:
+        print(f"⚡ Skipped clinic seeding: '{slug}' already exists (updated settings).")
         existing.name = name
         existing.twilio_number = twilio_number
         existing.twilio_sid = twilio_sid
         existing.twilio_token = twilio_token
         db.session.commit()
-        print(f"🔄 Updated clinic '{slug}'")
     else:
         clinic = Clinic(
             slug=slug,
@@ -55,12 +55,12 @@ def seed_clinic(slug="test-clinic", name="Test Clinic", twilio_number="+12345678
 def seed_api_key(clinic_slug="test-clinic", description="Test API Key"):
     clinic = Clinic.query.filter_by(slug=clinic_slug).first()
     if not clinic:
-        print(f"❌ Clinic '{clinic_slug}' not found. Seed clinic first.")
+        print(f"❌ Clinic '{clinic_slug}' not found. Cannot seed API key.")
         return
 
     existing = ApiKey.query.filter_by(clinic_id=clinic.id, description=description).first()
     if existing:
-        print(f"🔄 API key for clinic '{clinic_slug}' already exists.")
+        print(f"⚡ Skipped API key seeding: Key '{description}' already exists for clinic '{clinic_slug}'.")
         return
 
     key_value = secrets.token_hex(16)
@@ -78,12 +78,12 @@ def seed_api_key(clinic_slug="test-clinic", description="Test API Key"):
 def seed_call_logs(clinic_slug="test-clinic", count=5):
     clinic = Clinic.query.filter_by(slug=clinic_slug).first()
     if not clinic:
-        print(f"❌ Clinic '{clinic_slug}' not found. Seed clinic first.")
+        print(f"❌ Clinic '{clinic_slug}' not found. Cannot seed call logs.")
         return
 
     existing_count = CallLog.query.filter_by(clinic_id=clinic.id).count()
     if existing_count > 0:
-        print(f"🔄 Skipping call logs (already {existing_count} present).")
+        print(f"⚡ Skipped call logs: {existing_count} logs already exist for clinic '{clinic_slug}'.")
         return
 
     now = datetime.utcnow()
@@ -105,12 +105,12 @@ def seed_call_logs(clinic_slug="test-clinic", count=5):
 def seed_sms_logs(clinic_slug="test-clinic", count=5):
     clinic = Clinic.query.filter_by(slug=clinic_slug).first()
     if not clinic:
-        print(f"❌ Clinic '{clinic_slug}' not found. Seed clinic first.")
+        print(f"❌ Clinic '{clinic_slug}' not found. Cannot seed SMS logs.")
         return
 
     existing_count = SmsLog.query.filter_by(clinic_id=clinic.id).count()
     if existing_count > 0:
-        print(f"🔄 Skipping SMS logs (already {existing_count} present).")
+        print(f"⚡ Skipped SMS logs: {existing_count} logs already exist for clinic '{clinic_slug}'.")
         return
 
     now = datetime.utcnow()
@@ -130,19 +130,19 @@ def seed_sms_logs(clinic_slug="test-clinic", count=5):
 
 
 if __name__ == "__main__":
+    auto_seed = os.getenv("AUTO_SEED", "false").lower() == "true"
+    if not auto_seed:
+        print("⚠️ AUTO_SEED is disabled. Skipping seeding.")
+        sys.exit(0)
+
     with app.app_context():
-        # 1. Seed clinic
+        print("🚀 Starting database seeding...")
+
         seed_clinic(slug="test-clinic", name="Test Clinic")
-
-        # 2. Fetch clinic so admin can link to it
         clinic = Clinic.query.filter_by(slug="test-clinic").first()
-
-        # 3. Seed admin tied to clinic
         seed_admin(username="admin", password="admin123", is_superadmin=True, clinic_id=clinic.id)
-
-        # 4. Seed API key for clinic
         seed_api_key(clinic_slug="test-clinic")
-
-        # 5. Seed activity logs (only if empty)
         seed_call_logs(clinic_slug="test-clinic")
         seed_sms_logs(clinic_slug="test-clinic")
+
+        print("✅ Seeding complete.")
