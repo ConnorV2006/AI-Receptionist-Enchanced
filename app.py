@@ -36,7 +36,7 @@ class Clinic(db.Model):
     twilio_number = db.Column(db.String(20))
     twilio_sid = db.Column(db.String(120))
     twilio_token = db.Column(db.String(120))
-    auto_focus_enabled = db.Column(db.Boolean, default=False)  # NEW FIELD
+    auto_focus_enabled = db.Column(db.Boolean, default=False)  # NEW
 
 class QuickReplyTemplate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
