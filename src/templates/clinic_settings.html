@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <h1>Settings for {{ clinic.name }}</h1>
+  <form method="post">
+    <label>
+      <input type="checkbox" name="auto_focus_enabled" value="1"
+        {% if clinic.auto_focus_enabled %}checked{% endif %}>
+      Auto-focus SMS box after Quick Reply insert
+    </label>
+    <br><br>
+    <button type="submit">Save Settings</button>
+  </form>
+</div>
+{% endblock %}
