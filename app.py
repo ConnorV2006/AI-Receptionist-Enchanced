@@ -62,7 +62,6 @@ class SmsLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(50))
 
-# ---- New Models ----
 class Patient(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     clinic_id = db.Column(db.Integer, db.ForeignKey('clinic.id'), nullable=False)
@@ -119,6 +118,17 @@ def log_action(admin, action, details=""):
     db.session.add(entry)
     db.session.commit()
 
+def expand_shortcodes(clinic, text):
+    """Replace ::shortcode with matching quick reply body"""
+    if not text:
+        return text
+    replies = QuickReplyTemplate.query.filter_by(clinic_id=clinic.id).all()
+    for r in replies:
+        shortcode = f"::{r.title.lower().replace(' ', '')}"
+        if shortcode in text.lower():
+            text = text.replace(shortcode, r.body)
+    return text
+
 # -------------------------------------------------
 # Routes
 # -------------------------------------------------
@@ -141,6 +151,9 @@ def send_sms(slug):
     to_number = request.form.get("to")
     body = request.form.get("message", "").strip()
 
+    # Expand inline quick reply shortcodes like ::late
+    body = expand_shortcodes(clinic, body)
+
     if not to_number or not body:
         flash("Phone number and message are required.", "error")
         return redirect(url_for("clinic_dashboard", slug=slug))
@@ -160,9 +173,6 @@ def send_sms(slug):
     )
     db.session.add(sms_log)
     db.session.commit()
-
-    # Example admin log (replace with session user in real app)
-    # log_action(current_admin, "Sent SMS", f"To {to_number}, message: {body[:50]}")
 
     flash("SMS sent successfully.", "success")
     return redirect(url_for("clinic_dashboard", slug=slug))
@@ -192,9 +202,6 @@ def call_patient(slug):
     db.session.add(call_log)
     db.session.commit()
 
-    # Example admin log
-    # log_action(current_admin, "Placed Call", f"To {to_number}")
-
     flash("Call initiated successfully.", "success")
     return redirect(url_for("clinic_dashboard", slug=slug))
 
@@ -217,3 +224,27 @@ def manage_quick_replies(slug):
         return redirect(url_for("manage_quick_replies", slug=slug))
     replies = QuickReplyTemplate.query.filter_by(clinic_id=clinic.id).all()
     return render_template("quick_replies.html", clinic=clinic, replies=replies)
+
+@app.route("/clinics/<slug>/quick-replies/<int:reply_id>/edit", methods=["GET", "POST"])
+def edit_quick_reply(slug, reply_id):
+    clinic = Clinic.query.filter_by(slug=slug).first_or_404()
+    reply = QuickReplyTemplate.query.filter_by(id=reply_id, clinic_id=clinic.id).first_or_404()
+
+    if request.method == "POST":
+        reply.title = request.form.get("title")
+        reply.body = request.form.get("body")
+        db.session.commit()
+        flash("Quick reply updated.", "success")
+        return redirect(url_for("manage_quick_replies", slug=slug))
+
+    return render_template("edit_quick_reply.html", clinic=clinic, reply=reply)
+
+@app.route("/clinics/<slug>/quick-replies/<int:reply_id>/delete", methods=["POST"])
+def delete_quick_reply(slug, reply_id):
+    clinic = Clinic.query.filter_by(slug=slug).first_or_404()
+    reply = QuickReplyTemplate.query.filter_by(id=reply_id, clinic_id=clinic.id).first_or_404()
+
+    db.session.delete(reply)
+    db.session.commit()
+    flash("Quick reply deleted.", "info")
+    return redirect(url_for("manage_quick_replies", slug=slug))
