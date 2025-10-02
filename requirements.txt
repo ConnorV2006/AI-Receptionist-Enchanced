@@ -1,7 +1,7 @@
 Flask==3.0.3
 Flask-SQLAlchemy==3.1.1
 Flask-Migrate==4.0.7
-cryptography==43.0.1
+cryptography==44.0.1
 python-dotenv==1.0.1
 twilio==9.3.4
 gunicorn==23.0.0
