@@ -1,82 +1,110 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Reports & Audit Logs</h1>
 
-<!-- Weekly Summary -->
-<h2>Weekly Summary (Last 7 Days)</h2>
-<table border="1" cellpadding="6" cellspacing="0">
-  <tr><th>Staff</th><th>Total Hours</th></tr>
-  {% for user, hours in weekly_hours %}
-  <tr>
-    <td>{{ user }}</td>
-    <td>{{ "%.2f"|format(hours or 0) }}</td>
-  </tr>
-  {% else %}
-  <tr><td colspan="2">No hours logged yet.</td></tr>
-  {% endfor %}
-</table>
+<div class="card">
+  <h2>📊 Reports & Analytics</h2>
+  <p>Review staff shifts, audit logs, and download payroll reports.</p>
+</div>
 
-<!-- Filter Form -->
-<h2>Filter Shifts</h2>
-<form method="post">
-  <label for="staff_id">Staff:</label>
-  <select name="staff_id">
-    <option value="all">All</option>
-    {% for staff in all_staff %}
-      <option value="{{ staff.id }}">{{ staff.username }}</option>
-    {% endfor %}
-  </select>
-
-  <label for="date_from">From:</label>
-  <input type="date" name="date_from">
-
-  <label for="date_to">To:</label>
-  <input type="date" name="date_to">
-
-  <button type="submit">Filter</button>
-</form>
-
-<!-- Export Buttons -->
-<p style="margin-top:10px;">
+<div class="card">
+  <h2>Quick Export</h2>
   <a href="{{ url_for('export_csv') }}" class="button">📥 Export CSV</a>
   <a href="{{ url_for('export_excel') }}" class="button">📊 Export Excel (Payroll)</a>
-</p>
+</div>
 
-<!-- Shifts Table -->
-<h2>Staff Shifts</h2>
-<table border="1" cellpadding="6" cellspacing="0">
-  <tr><th>Staff</th><th>Clock In</th><th>Clock Out</th><th>Hours</th></tr>
-  {% for shift in shifts %}
-  <tr>
-    <td>{{ shift.admin.username }}</td>
-    <td>{{ shift.clock_in.strftime("%Y-%m-%d %I:%M %p") }}</td>
-    <td>
-      {% if shift.clock_out %}
-        {{ shift.clock_out.strftime("%Y-%m-%d %I:%M %p") }}
+<div class="card">
+  <h2>Weekly Summary (Last 7 Days)</h2>
+  <table>
+    <thead>
+      <tr><th>Staff</th><th>Total Hours</th><th>Overtime</th></tr>
+    </thead>
+    <tbody>
+      {% if weekly_hours %}
+        {% for user, hours in weekly_hours %}
+        <tr>
+          <td>{{ user }}</td>
+          <td>{{ "%.2f"|format(hours or 0) }}</td>
+          <td>{% if hours and hours > 40 %}🚨 YES{% else %}OK{% endif %}</td>
+        </tr>
+        {% endfor %}
       {% else %}
-        Active
+        <tr><td colspan="3">No hours logged yet.</td></tr>
       {% endif %}
-    </td>
-    <td>{{ shift.duration_hours if shift.duration_hours else "-" }}</td>
-  </tr>
-  {% else %}
-  <tr><td colspan="4">No shifts logged.</td></tr>
-  {% endfor %}
-</table>
+    </tbody>
+  </table>
+</div>
 
-<!-- Audit Logs -->
-<h2 style="margin-top:30px;">Recent Audit Logs</h2>
-<table border="1" cellpadding="6" cellspacing="0">
-  <tr><th>Time</th><th>Staff</th><th>Action</th><th>Details</th></tr>
-  {% for log in logs %}
-  <tr>
-    <td>{{ log.timestamp.strftime("%Y-%m-%d %I:%M %p") }}</td>
-    <td>{{ log.admin.username if log.admin else "Unknown" }}</td>
-    <td>{{ log.action }}</td>
-    <td>{{ log.details or "" }}</td>
-  </tr>
-  {% else %}
-  <tr><td colspan="4">No audit logs yet.</td></tr>
-  {% endfor %}
-</table>
+<div class="card">
+  <h2>Filter Shifts</h2>
+  <form method="post">
+    <label for="staff_id">Staff:</label>
+    <select name="staff_id">
+      <option value="all">All</option>
+      {% for staff in all_staff %}
+        <option value="{{ staff.id }}">{{ staff.username }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="date_from">From:</label>
+    <input type="date" name="date_from">
+
+    <label for="date_to">To:</label>
+    <input type="date" name="date_to">
+
+    <button type="submit">Filter</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Staff Shifts</h2>
+  <table>
+    <thead>
+      <tr><th>Staff</th><th>Clock In</th><th>Clock Out</th><th>Hours</th></tr>
+    </thead>
+    <tbody>
+      {% if shifts %}
+        {% for shift in shifts %}
+        <tr>
+          <td>{{ shift.admin.username }}</td>
+          <td>{{ shift.clock_in.strftime("%Y-%m-%d %I:%M %p") }}</td>
+          <td>
+            {% if shift.clock_out %}
+              {{ shift.clock_out.strftime("%Y-%m-%d %I:%M %p") }}
+            {% else %}
+              Active
+            {% endif %}
+          </td>
+          <td>{{ shift.duration_hours if shift.duration_hours else "-" }}</td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="4">No shifts logged.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Recent Audit Logs</h2>
+  <table>
+    <thead>
+      <tr><th>Time</th><th>Staff</th><th>Action</th><th>Details</th></tr>
+    </thead>
+    <tbody>
+      {% if logs %}
+        {% for log in logs %}
+        <tr>
+          <td>{{ log.timestamp.strftime("%Y-%m-%d %I:%M %p") }}</td>
+          <td>{{ log.admin.username if log.admin else "Unknown" }}</td>
+          <td>{{ log.action }}</td>
+          <td>{{ log.details or "" }}</td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="4">No audit logs yet.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
 {% endblock %}
