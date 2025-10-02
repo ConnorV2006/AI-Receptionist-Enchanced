@@ -33,10 +33,14 @@ class Clinic(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(80), unique=True, nullable=False)
     name = db.Column(db.String(120), nullable=False)
+    address = db.Column(db.String(255))  # NEW
+    city = db.Column(db.String(100))     # NEW
+    state = db.Column(db.String(50))     # NEW
+    zip = db.Column(db.String(20))       # NEW
     twilio_number = db.Column(db.String(20))
     twilio_sid = db.Column(db.String(120))
     twilio_token = db.Column(db.String(120))
-    auto_focus_enabled = db.Column(db.Boolean, default=False)  # NEW
+    auto_focus_enabled = db.Column(db.Boolean, default=False)
 
 class QuickReplyTemplate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -89,6 +93,15 @@ def get_twilio_client():
 
 def get_twilio_from_number(clinic):
     return clinic.twilio_number or os.getenv("TWILIO_NUMBER")
+
+def build_reminder_message(clinic, patient, appt):
+    address = f"{clinic.address or ''}, {clinic.city or ''}, {clinic.state or ''} {clinic.zip or ''}".strip(", ")
+    return (
+        f"Hello {patient.full_name}, this is a friendly reminder from {clinic.name}. "
+        f"Your appointment is scheduled for tomorrow at {appt.appt_time.strftime('%I:%M %p')}. "
+        f"Location: {address if address else 'your clinic location'}. "
+        f"If you need to reschedule, please reply or call us. Thank you!"
+    )
 
 # -------------------------------------------------
 # Routes
@@ -177,3 +190,7 @@ def clinic_settings(slug):
         flash("Settings updated.", "success")
         return redirect(url_for("clinic_settings", slug=slug))
     return render_template("clinic_settings.html", clinic=clinic)
+
+# Allow CLI/worker imports
+if __name__ == "__main__":
+    app.run(debug=True)
