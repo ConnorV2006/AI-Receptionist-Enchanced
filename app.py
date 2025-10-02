@@ -1,9 +1,13 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+import csv
+from io import StringIO, BytesIO
+from flask import Flask, render_template, request, redirect, url_for, flash, session, Response, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
+from sqlalchemy import func
+import openpyxl
 
 # -------------------------------------------------
 # App Setup
@@ -43,7 +47,7 @@ class Clinic(db.Model):
 class AuditLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     admin_id = db.Column(db.Integer, db.ForeignKey("admin.id"))
-    action = db.Column(db.String(100), nullable=False)  # e.g., login, logout, clock_in, clock_out
+    action = db.Column(db.String(100), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     details = db.Column(db.Text)
     admin = db.relationship("Admin", backref="audit_logs")
@@ -54,7 +58,6 @@ class Shift(db.Model):
     admin_id = db.Column(db.Integer, db.ForeignKey("admin.id"))
     clock_in = db.Column(db.DateTime, default=datetime.utcnow)
     clock_out = db.Column(db.DateTime, nullable=True)
-
     admin = db.relationship("Admin", backref="shifts")
 
     @property
@@ -144,16 +147,105 @@ def clock_out():
         flash("Clock-out successful!", "success")
     return redirect(url_for("dashboard"))
 
-@app.route("/reports")
+@app.route("/reports", methods=["GET", "POST"])
 def reports():
     admin = get_current_admin()
     if not admin or not admin.is_superadmin:
         flash("Permission denied.", "error")
         return redirect(url_for("dashboard"))
 
-    shifts = Shift.query.order_by(Shift.clock_in.desc()).all()
+    # Filters
+    staff_id = request.form.get("staff_id")
+    date_from = request.form.get("date_from")
+    date_to = request.form.get("date_to")
+
+    query = Shift.query
+    if staff_id and staff_id != "all":
+        query = query.filter_by(admin_id=int(staff_id))
+    if date_from:
+        query = query.filter(Shift.clock_in >= date_from)
+    if date_to:
+        query = query.filter(Shift.clock_in <= date_to)
+
+    shifts = query.order_by(Shift.clock_in.desc()).all()
     logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(50).all()
-    return render_template("reports.html", admin=admin, shifts=shifts, logs=logs)
+
+    # Weekly summary (last 7 days)
+    week_start = datetime.utcnow() - timedelta(days=7)
+    weekly_hours = (
+        db.session.query(Admin.username, func.sum(func.extract("epoch", Shift.clock_out - Shift.clock_in) / 3600))
+        .join(Shift.admin)
+        .filter(Shift.clock_in >= week_start, Shift.clock_out != None)
+        .group_by(Admin.username)
+        .all()
+    )
+
+    return render_template(
+        "reports.html",
+        admin=admin,
+        shifts=shifts,
+        logs=logs,
+        weekly_hours=weekly_hours,
+        all_staff=Admin.query.all()
+    )
+
+# -------------------------
+# Export CSV
+# -------------------------
+@app.route("/reports/export/csv")
+def export_csv():
+    admin = get_current_admin()
+    if not admin or not admin.is_superadmin:
+        flash("Permission denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    shifts = Shift.query.order_by(Shift.clock_in.desc()).all()
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Staff", "Clock In", "Clock Out", "Hours"])
+
+    for shift in shifts:
+        writer.writerow([
+            shift.admin.username,
+            shift.clock_in.strftime("%Y-%m-%d %H:%M"),
+            shift.clock_out.strftime("%Y-%m-%d %H:%M") if shift.clock_out else "Active",
+            shift.duration_hours if shift.duration_hours else "-"
+        ])
+
+    response = Response(output.getvalue(), mimetype="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=shifts.csv"
+    return response
+
+# -------------------------
+# Export Excel
+# -------------------------
+@app.route("/reports/export/excel")
+def export_excel():
+    admin = get_current_admin()
+    if not admin or not admin.is_superadmin:
+        flash("Permission denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    shifts = Shift.query.order_by(Shift.clock_in.desc()).all()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Shifts"
+
+    ws.append(["Staff", "Clock In", "Clock Out", "Hours"])
+    for shift in shifts:
+        ws.append([
+            shift.admin.username,
+            shift.clock_in.strftime("%Y-%m-%d %H:%M"),
+            shift.clock_out.strftime("%Y-%m-%d %H:%M") if shift.clock_out else "Active",
+            shift.duration_hours if shift.duration_hours else "-"
+        ])
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name="shifts.xlsx", mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # -------------------------------------------------
 # Run (local only)
