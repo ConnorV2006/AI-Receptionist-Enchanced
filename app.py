@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from flask import (
-    Flask, request, redirect, url_for, render_template, flash
+    Flask, request, redirect, url_for, render_template, flash, abort, session
 )
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -33,10 +33,10 @@ class Clinic(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(80), unique=True, nullable=False)
     name = db.Column(db.String(120), nullable=False)
-    address = db.Column(db.String(255))  # NEW
-    city = db.Column(db.String(100))     # NEW
-    state = db.Column(db.String(50))     # NEW
-    zip = db.Column(db.String(20))       # NEW
+    address = db.Column(db.String(255))
+    city = db.Column(db.String(100))
+    state = db.Column(db.String(50))
+    zip = db.Column(db.String(20))
     twilio_number = db.Column(db.String(20))
     twilio_sid = db.Column(db.String(120))
     twilio_token = db.Column(db.String(120))
@@ -94,14 +94,12 @@ def get_twilio_client():
 def get_twilio_from_number(clinic):
     return clinic.twilio_number or os.getenv("TWILIO_NUMBER")
 
-def build_reminder_message(clinic, patient, appt):
-    address = f"{clinic.address or ''}, {clinic.city or ''}, {clinic.state or ''} {clinic.zip or ''}".strip(", ")
-    return (
-        f"Hello {patient.full_name}, this is a friendly reminder from {clinic.name}. "
-        f"Your appointment is scheduled for tomorrow at {appt.appt_time.strftime('%I:%M %p')}. "
-        f"Location: {address if address else 'your clinic location'}. "
-        f"If you need to reschedule, please reply or call us. Thank you!"
-    )
+def get_current_admin():
+    """ Placeholder – replace with real login/session """
+    admin_id = session.get("admin_id")
+    if not admin_id:
+        return None
+    return Admin.query.get(admin_id)
 
 # -------------------------------------------------
 # Routes
@@ -126,61 +124,6 @@ def clinic_dashboard(slug):
         replies=replies
     )
 
-@app.route("/clinics/<slug>/send-sms", methods=["POST"])
-def send_sms(slug):
-    clinic = Clinic.query.filter_by(slug=slug).first_or_404()
-    to_number = request.form.get("to")
-    body = request.form.get("message", "").strip()
-
-    if not to_number or not body:
-        flash("Phone number and message are required.", "error")
-        return redirect(url_for("clinic_dashboard", slug=slug))
-
-    client = get_twilio_client()
-    from_number = get_twilio_from_number(clinic)
-    client.messages.create(body=body, from_=from_number, to=to_number)
-
-    sms_log = SmsLog(
-        clinic_id=clinic.id,
-        from_number=from_number,
-        to_number=to_number,
-        message_body=body,
-        timestamp=datetime.utcnow(),
-        status="queued",
-    )
-    db.session.add(sms_log)
-    db.session.commit()
-
-    flash("SMS sent successfully.", "success")
-    return redirect(url_for("clinic_dashboard", slug=slug))
-
-@app.route("/clinics/<slug>/call", methods=["POST"])
-def call_patient(slug):
-    clinic = Clinic.query.filter_by(slug=slug).first_or_404()
-    to_number = request.form.get("to")
-
-    client = get_twilio_client()
-    from_number = get_twilio_from_number(clinic)
-    client.calls.create(
-        twiml='<Response><Say>Hello, this is your clinic receptionist calling with a reminder.</Say></Response>',
-        from_=from_number,
-        to=to_number,
-    )
-
-    call_log = CallLog(
-        clinic_id=clinic.id,
-        from_number=from_number,
-        to_number=to_number,
-        duration=0,
-        timestamp=datetime.utcnow(),
-        status="queued",
-    )
-    db.session.add(call_log)
-    db.session.commit()
-
-    flash("Call initiated successfully.", "success")
-    return redirect(url_for("clinic_dashboard", slug=slug))
-
 @app.route("/clinics/<slug>/settings", methods=["GET", "POST"])
 def clinic_settings(slug):
     clinic = Clinic.query.filter_by(slug=slug).first_or_404()
@@ -191,6 +134,28 @@ def clinic_settings(slug):
         return redirect(url_for("clinic_settings", slug=slug))
     return render_template("clinic_settings.html", clinic=clinic)
 
-# Allow CLI/worker imports
+@app.route("/clinics/<slug>/manage", methods=["GET", "POST"])
+def clinic_manager(slug):
+    clinic = Clinic.query.filter_by(slug=slug).first_or_404()
+    admin = get_current_admin()
+    if not admin or not admin.is_superadmin:
+        abort(403)  # ❌ block non-superadmins
+
+    if request.method == "POST":
+        clinic.name = request.form.get("name")
+        clinic.address = request.form.get("address")
+        clinic.city = request.form.get("city")
+        clinic.state = request.form.get("state")
+        clinic.zip = request.form.get("zip")
+        clinic.twilio_number = request.form.get("twilio_number")
+        db.session.commit()
+        flash("Clinic information updated successfully.", "success")
+        return redirect(url_for("clinic_manager", slug=slug))
+
+    return render_template("clinic_manager.html", clinic=clinic)
+
+# -------------------------------------------------
+# Run
+# -------------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True)
