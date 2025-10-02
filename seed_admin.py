@@ -1,5 +1,5 @@
 import os
-from app import app, db, Admin   # <-- import Admin directly from app.py
+from app import app, db, Admin   # ✅ Import Admin directly from app.py
 from werkzeug.security import generate_password_hash
 
 def seed_admin(username="admin", password="admin123", is_superadmin=True, clinic_id=None):
