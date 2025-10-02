@@ -1,10 +1,12 @@
 import os
 from datetime import datetime, timedelta
-from app import db, Clinic, Appointment, Patient, get_twilio_client, get_twilio_from_number
+from app import db, Clinic, Appointment, Patient, get_twilio_client, get_twilio_from_number, build_reminder_message
 
 def send_appointment_reminders():
     now = datetime.utcnow()
     tomorrow = now + timedelta(days=1)
+
+    # Range: midnight tomorrow → midnight next day
     start = datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, 0)
     end = start + timedelta(days=1)
 
@@ -14,7 +16,7 @@ def send_appointment_reminders():
     ).all()
 
     if not appointments:
-        print("✅ No appointments tomorrow. Nothing to send.")
+        print("✅ No appointments scheduled for tomorrow. Nothing to send.")
         return
 
     client = get_twilio_client()
@@ -24,17 +26,18 @@ def send_appointment_reminders():
         patient = appt.patient
         from_number = get_twilio_from_number(clinic)
 
-        body = f"Reminder: {clinic.name} appointment for {patient.full_name} on {appt.appt_time.strftime('%Y-%m-%d %I:%M %p')}"
+        # ✅ Human-friendly reminder message
+        body = build_reminder_message(clinic, patient, appt)
 
         try:
-            message = client.messages.create(
+            client.messages.create(
                 body=body,
                 from_=from_number,
                 to=patient.phone_number
             )
-            print(f"📤 Sent reminder to {patient.full_name} ({patient.phone_number})")
+            print(f"📤 Reminder sent to {patient.full_name} ({patient.phone_number})")
         except Exception as e:
-            print(f"⚠️ Failed to send SMS to {patient.full_name}: {e}")
+            print(f"⚠️ Failed to send reminder to {patient.full_name}: {e}")
 
 if __name__ == "__main__":
     send_appointment_reminders()
