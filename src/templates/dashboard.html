@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Dashboard</h1>
+
+  {% if admin %}
+    <p>Welcome, {{ admin.username }}
+      {% if admin.is_superadmin %} (Super Admin){% endif %}.
+    </p>
+    <p>You can manage your clinic using the navigation above.</p>
+  {% else %}
+    <p>Welcome to <strong>AI Receptionist</strong>.</p>
+    <p>Please <a href="{{ url_for('login') }}">log in</a> to access your clinic dashboard.</p>
+  {% endif %}
+{% endblock %}
