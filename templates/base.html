@@ -27,11 +27,13 @@
         <a href="{{ url_for('clinic_settings', slug=clinic.slug) }}">Settings</a>
         {% if admin and admin.is_superadmin %}
           <a href="{{ url_for('clinic_manager', slug=clinic.slug) }}">Manage Clinic</a>
-          <a href="{{ url_for('comms_heatmap', slug=clinic.slug) }}">Heatmap</a>
+          <a href="{{ url_for('reports') }}">Reports</a>
         {% endif %}
       {% endif %}
 
       {% if admin %}
+        <a href="{{ url_for('clock_in') }}">Clock In</a>
+        <a href="{{ url_for('clock_out') }}">Clock Out</a>
         <a href="{{ url_for('logout') }}">Logout</a>
       {% else %}
         <a href="{{ url_for('login') }}">Login</a>
