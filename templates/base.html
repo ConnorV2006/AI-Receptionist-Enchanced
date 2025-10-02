@@ -1,23 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>{{ clinic.name if clinic else "AI Receptionist" }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    :root { --brand: {{ clinic.primary_color if clinic and clinic.primary_color else "#1f6feb" }}; }
+    header { border-bottom: 3px solid var(--brand); padding: 8px 0; margin-bottom: 16px; }
+    nav a { margin-right: 10px; color: var(--brand); text-decoration: none; font-weight: 600; }
+    .flashes li.error { color: #b00020; }
+    .flashes li.success { color: #0a7a2d; }
+  </style>
 </head>
 <body>
   <header>
-    <nav style="margin-bottom: 20px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      {% if clinic and clinic.logo_url %}
+        <img src="{{ clinic.logo_url }}" alt="Logo" style="height:36px;">
+      {% endif %}
+      <strong>{{ clinic.name if clinic else "AI Receptionist" }}</strong>
+    </div>
+    <nav>
       <a href="{{ url_for('dashboard') }}">Home</a>
       {% if clinic %}
-        | <a href="{{ url_for('clinic_dashboard', slug=clinic.slug) }}">Dashboard</a>
-        | <a href="{{ url_for('clinic_settings', slug=clinic.slug) }}">Settings</a>
-
-        {# ✅ Only show Manage Clinic if the logged-in admin is superadmin #}
+        <a href="{{ url_for('clinic_dashboard', slug=clinic.slug) }}">Dashboard</a>
+        <a href="{{ url_for('clinic_settings', slug=clinic.slug) }}">Settings</a>
         {% if session.admin_id %}
           {% set admin = Admin.query.get(session.admin_id) %}
           {% if admin and admin.is_superadmin %}
-            | <a href="{{ url_for('clinic_manager', slug=clinic.slug) }}">Manage Clinic</a>
+            <a href="{{ url_for('clinic_manager', slug=clinic.slug) }}">Manage Clinic</a>
+            <a href="{{ url_for('comms_heatmap', slug=clinic.slug) }}">Heatmap</a>
           {% endif %}
         {% endif %}
       {% endif %}
@@ -28,13 +40,13 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <ul class="flashes">
-        {% for category, message in messages %}
-          <li class="{{ category }}">{{ message }}</li>
-        {% endfor %}
+          {% for category, message in messages %}
+            <li class="{{ category }}">{{ message }}</li>
+          {% endfor %}
         </ul>
       {% endif %}
     {% endwith %}
-    
+
     {% block content %}{% endblock %}
   </main>
 </body>
