@@ -1,19 +1,50 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - AI Receptionist{% endblock %}
 {% block content %}
-<h1>Dashboard</h1>
-<p>Welcome, {{ admin.username }}{% if admin.is_superadmin %} (Super Admin){% endif %}.</p>
-{% if admin.is_superadmin %}
-    <p><a href="{{ url_for('admins_list') }}">Manage Admins</a></p>
-{% endif %}
-<h2>Your Clinics</h2>
-{% if clinics %}
-    <ul>
-        {% for clinic in clinics %}
-            <li><a href="{{ url_for('clinic_dashboard', slug=clinic.slug) }}">{{ clinic.name }}</a></li>
+
+<div class="card">
+  <h2>Welcome, {{ admin.username }}!</h2>
+  {% if admin.role == "superadmin" %}
+    <p>You are logged in as <strong>Super Admin</strong>.</p>
+  {% elif admin.role == "manager" %}
+    <p>You are logged in as <strong>Manager</strong>.</p>
+  {% else %}
+    <p>You are logged in as <strong>Staff</strong>.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Quick Actions</h2>
+  <a href="{{ url_for('reports') }}" class="button">📊 View Reports</a>
+  <a href="{{ url_for('manage_admins') }}" class="button">👥 Manage Staff</a>
+  <a href="#" class="button">📩 Send SMS</a>
+</div>
+
+<div class="card">
+  <h2>Recent Activity</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>User</th>
+        <th>Action</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if logs %}
+        {% for log in logs %}
+          <tr>
+            <td>{{ log.timestamp.strftime("%Y-%m-%d %H:%M") }}</td>
+            <td>{{ log.admin.username if log.admin else "Unknown" }}</td>
+            <td>{{ log.action }}</td>
+            <td>{{ log.details or "" }}</td>
+          </tr>
         {% endfor %}
-    </ul>
-{% else %}
-    <p>No clinics available.</p>
-{% endif %}
+      {% else %}
+        <tr><td colspan="4">No recent activity yet.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
 {% endblock %}
