@@ -1,35 +1,21 @@
 {% extends "base.html" %}
+{% block title %}Clinic Dashboard{% endblock %}
 {% block content %}
+<h1>{{ clinic.name }} — Clinic Admin</h1>
 
-<h2>Clinic Dashboard</h2>
+<form method="post">
+  <label>Clinic Name</label><br>
+  <input name="name" value="{{ clinic.name }}"><br><br>
 
-<hr>
+  <label>Twilio Number</label><br>
+  <input name="twilio_number" value="{{ clinic.twilio_number or '' }}"><br><br>
 
-<h3>📋 Patients</h3>
-<table>
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Phone</th>
-      <th>Email</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for patient in patients %}
-    <tr>
-      <td>{{ patient.name }}</td>
-      <td>{{ patient.phone }}</td>
-      <td>{{ patient.email or "N/A" }}</td>
-      <td>
-        <a class="btn" href="{{ url_for('patient_print', patient_id=patient.id) }}" target="_blank">🖨 Print</a>
-        <a class="btn" href="{{ url_for('patient_print_pdf', patient_id=patient.id) }}">📄 PDF</a>
-        <a class="btn" href="{{ url_for('patient_send_email', patient_id=patient.id) }}">📧 Email</a>
-        <a class="btn" href="{{ url_for('patient_send_sms', patient_id=patient.id) }}">📲 SMS</a>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+  <label>Twilio SID</label><br>
+  <input name="twilio_sid" value="{{ clinic.twilio_sid or '' }}"><br><br>
 
+  <label>Twilio Token</label><br>
+  <input name="twilio_token" value="{{ clinic.twilio_token or '' }}"><br><br>
+
+  <button type="submit">Save</button>
+</form>
 {% endblock %}
