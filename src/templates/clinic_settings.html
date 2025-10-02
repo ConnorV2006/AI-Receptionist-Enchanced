@@ -1,15 +1,40 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container">
-  <h1>Settings for {{ clinic.name }}</h1>
-  <form method="post">
-    <label>
-      <input type="checkbox" name="auto_focus_enabled" value="1"
-        {% if clinic.auto_focus_enabled %}checked{% endif %}>
-      Auto-focus SMS box after Quick Reply insert
-    </label>
-    <br><br>
-    <button type="submit">Save Settings</button>
-  </form>
+  <h1>{{ clinic.name }} Dashboard</h1>
+
+  <div class="card">
+    <h2>Send SMS</h2>
+    <form method="post" action="{{ url_for('send_sms', slug=clinic.slug) }}">
+      <label>To:</label>
+      <input type="text" name="to" required>
+
+      <label>Message:</label>
+      <textarea id="sms-message" name="message" rows="3" required></textarea>
+
+      <div style="margin-top: 15px;">
+        <strong style="font-size: 1.2em;">Quick Replies:</strong><br>
+        {% for r in replies %}
+          <button type="button" 
+            title="{{ r.body }}" 
+            onclick="insertQuickReply('{{ r.body | e }}')"
+            style="margin:5px;padding:12px 18px;font-size:1.1em;font-weight:bold;">
+            {{ r.title }}
+          </button>
+        {% endfor %}
+      </div>
+
+      <button type="submit" style="margin-top: 15px;">Send SMS</button>
+    </form>
+  </div>
 </div>
+
+<script>
+function insertQuickReply(text) {
+  document.getElementById("sms-message").value = text;
+  {% if clinic.auto_focus_enabled %}
+  document.getElementById("sms-message").focus();
+  {% endif %}
+}
+</script>
 {% endblock %}
