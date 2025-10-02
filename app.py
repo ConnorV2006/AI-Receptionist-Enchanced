@@ -104,7 +104,14 @@ def clinic_dashboard(slug):
     call_logs = CallLog.query.filter_by(clinic_id=clinic.id).order_by(CallLog.timestamp.desc()).limit(10).all()
     appointments = Appointment.query.filter_by(clinic_id=clinic.id).order_by(Appointment.appt_time.asc()).limit(5).all()
     replies = QuickReplyTemplate.query.filter_by(clinic_id=clinic.id).all()
-    return render_template("clinic_dashboard.html", clinic=clinic, sms_logs=sms_logs, call_logs=call_logs, appointments=appointments, replies=replies)
+    return render_template(
+        "clinic_dashboard.html",
+        clinic=clinic,
+        sms_logs=sms_logs,
+        call_logs=call_logs,
+        appointments=appointments,
+        replies=replies
+    )
 
 @app.route("/clinics/<slug>/send-sms", methods=["POST"])
 def send_sms(slug):
