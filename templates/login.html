@@ -1,40 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Login - AI Receptionist{% endblock %}
 {% block content %}
-<div class="container" style="max-width:420px; margin-top:3rem;">
+<h1>Login</h1>
 
-  <div class="card" style="padding:2rem;">
-    <h1 style="text-align:center; margin-bottom:1.5rem;">Welcome Back</h1>
+<form method="post" action="{{ url_for('login') }}">
+  <label for="username">Username</label><br>
+  <input type="text" id="username" name="username" placeholder="Enter your username" required><br><br>
 
-    <!-- Flash messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <ul class="flashes">
-          {% for category, message in messages %}
-            <li class="{{ category }}">{{ message }}</li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
+  <label for="password">Password</label><br>
+  <input type="password" id="password" name="password" placeholder="Enter your password" required><br><br>
 
-    <form action="{{ url_for('login') }}" method="post">
-      <div>
-        <label for="username">Username</label>
-        <input type="text" name="username" placeholder="Enter your username" required>
-      </div>
+  <button type="submit">Login</button>
+</form>
 
-      <div>
-        <label for="password">Password</label>
-        <input type="password" name="password" placeholder="Enter your password" required>
-      </div>
-
-      <button type="submit" style="margin-top:1rem;">Log In</button>
-    </form>
-
-    <p style="text-align:center; margin-top:1rem; color:#6b7280;">
-      Don’t have access? Contact your administrator.
-    </p>
-  </div>
-
-</div>
+<p style="margin-top:20px;">
+  Forgot your password? Contact your administrator.
+</p>
 {% endblock %}
