@@ -3,8 +3,6 @@
 
 <h2>Clinic Dashboard</h2>
 
-<p>Welcome, {{ admin.username }}{% if admin.is_superadmin %} (Super Admin){% endif %}.</p>
-
 <hr>
 
 <h3>📋 Patients</h3>
@@ -13,7 +11,7 @@
     <tr>
       <th>Name</th>
       <th>Phone</th>
-      <th>Upcoming Appointment</th>
+      <th>Email</th>
       <th>Actions</th>
     </tr>
   </thead>
@@ -22,33 +20,16 @@
     <tr>
       <td>{{ patient.name }}</td>
       <td>{{ patient.phone }}</td>
+      <td>{{ patient.email or "N/A" }}</td>
       <td>
-        {% if patient.appointments %}
-          {{ patient.appointments[0].date.strftime("%B %d, %Y %I:%M %p") }}
-        {% else %}
-          None
-        {% endif %}
-      </td>
-      <td>
-        <!-- Print Summary button -->
-        <a class="btn" href="{{ url_for('patient_print', patient_id=patient.id) }}" target="_blank">
-          🖨 Print Summary
-        </a>
+        <a class="btn" href="{{ url_for('patient_print', patient_id=patient.id) }}" target="_blank">🖨 Print</a>
+        <a class="btn" href="{{ url_for('patient_print_pdf', patient_id=patient.id) }}">📄 PDF</a>
+        <a class="btn" href="{{ url_for('patient_send_email', patient_id=patient.id) }}">📧 Email</a>
+        <a class="btn" href="{{ url_for('patient_send_sms', patient_id=patient.id) }}">📲 SMS</a>
       </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
-
-<hr>
-
-<h3>⚡ Quick Actions</h3>
-<div>
-  <a class="btn" href="{{ url_for('send_sms', slug=clinic.slug) }}">Send SMS</a>
-  <a class="btn" href="{{ url_for('view_reports') }}">View Reports</a>
-  {% if admin.is_superadmin %}
-    <a class="btn" href="{{ url_for('edit_clinic', slug=clinic.slug) }}">Edit Clinic Info</a>
-  {% endif %}
-</div>
 
 {% endblock %}
