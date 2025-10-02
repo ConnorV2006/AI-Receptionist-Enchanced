@@ -58,6 +58,11 @@ def seed_api_key(clinic_slug="test-clinic", description="Test API Key"):
         print(f"❌ Clinic '{clinic_slug}' not found. Seed clinic first.")
         return
 
+    existing = ApiKey.query.filter_by(clinic_id=clinic.id, description=description).first()
+    if existing:
+        print(f"🔄 API key for clinic '{clinic_slug}' already exists.")
+        return
+
     key_value = secrets.token_hex(16)
     api_key = ApiKey(
         clinic_id=clinic.id,
@@ -74,6 +79,11 @@ def seed_call_logs(clinic_slug="test-clinic", count=5):
     clinic = Clinic.query.filter_by(slug=clinic_slug).first()
     if not clinic:
         print(f"❌ Clinic '{clinic_slug}' not found. Seed clinic first.")
+        return
+
+    existing_count = CallLog.query.filter_by(clinic_id=clinic.id).count()
+    if existing_count > 0:
+        print(f"🔄 Skipping call logs (already {existing_count} present).")
         return
 
     now = datetime.utcnow()
@@ -96,6 +106,11 @@ def seed_sms_logs(clinic_slug="test-clinic", count=5):
     clinic = Clinic.query.filter_by(slug=clinic_slug).first()
     if not clinic:
         print(f"❌ Clinic '{clinic_slug}' not found. Seed clinic first.")
+        return
+
+    existing_count = SmsLog.query.filter_by(clinic_id=clinic.id).count()
+    if existing_count > 0:
+        print(f"🔄 Skipping SMS logs (already {existing_count} present).")
         return
 
     now = datetime.utcnow()
@@ -128,6 +143,6 @@ if __name__ == "__main__":
         # 4. Seed API key for clinic
         seed_api_key(clinic_slug="test-clinic")
 
-        # 5. Seed activity logs
+        # 5. Seed activity logs (only if empty)
         seed_call_logs(clinic_slug="test-clinic")
         seed_sms_logs(clinic_slug="test-clinic")
