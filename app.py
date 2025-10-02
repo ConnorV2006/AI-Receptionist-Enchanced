@@ -1,18 +1,17 @@
 import os
 import secrets
 import logging
+import random
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import (
     Flask, render_template, request, redirect,
-    url_for, flash, session, Response
+    url_for, flash, session
 )
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
-from cryptography.fernet import Fernet, InvalidToken
 from twilio.rest import Client
-import random
 
 # -------------------------------------------------
 # App Setup
@@ -22,8 +21,8 @@ app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(16))
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Session timeout config
-SESSION_TIMEOUT = 30 * 60  # 30 minutes
+# Session timeout (30 min)
+SESSION_TIMEOUT = 30 * 60  
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -53,7 +52,6 @@ class AuditLog(db.Model):
     details = db.Column(db.Text)
     admin = db.relationship("Admin")
 
-
 # -------------------------------------------------
 # Helpers
 # -------------------------------------------------
@@ -62,16 +60,12 @@ def log_action(admin_id, action, details=""):
     db.session.add(log)
     db.session.commit()
 
-
 def get_current_admin():
     if "admin_id" not in session:
         return None
-    admin = Admin.query.get(session["admin_id"])
-    return admin
-
+    return Admin.query.get(session["admin_id"])
 
 def require_role(*roles):
-    """Decorator to restrict route access to specific roles"""
     def wrapper(func):
         @wraps(func)
         def decorated(*args, **kwargs):
@@ -83,7 +77,6 @@ def require_role(*roles):
         return decorated
     return wrapper
 
-
 @app.before_request
 def check_session_timeout():
     if "last_active" in session:
@@ -92,7 +85,6 @@ def check_session_timeout():
             flash("Session expired. Please log in again.", "warning")
             return redirect(url_for("login"))
     session["last_active"] = datetime.utcnow()
-
 
 # -------------------------------------------------
 # Routes
@@ -103,7 +95,6 @@ def dashboard():
     if not admin:
         return redirect(url_for("login"))
     return render_template("dashboard.html", admin=admin)
-
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -117,12 +108,11 @@ def login():
             code = str(random.randint(100000, 999999))
             session["pending_2fa"] = {"id": admin.id, "code": code, "timestamp": datetime.utcnow().isoformat()}
 
-            # Send via SMS (Twilio)
             try:
                 client = Client(os.environ.get("TWILIO_SID"), os.environ.get("TWILIO_TOKEN"))
                 if admin.phone_number:
                     client.messages.create(
-                        body=f"Your verification code is: {code}",
+                        body=f"Your AI Receptionist verification code is: {code}",
                         from_=os.environ.get("TWILIO_NUMBER"),
                         to=admin.phone_number
                     )
@@ -137,15 +127,23 @@ def login():
 
     return render_template("login.html")
 
-
 @app.route("/two-factor", methods=["GET", "POST"])
 def two_factor():
     if "pending_2fa" not in session:
         return redirect(url_for("login"))
 
+    pending = session["pending_2fa"]
+    code_timestamp = datetime.fromisoformat(pending["timestamp"])
+    now = datetime.utcnow()
+
+    # Expire after 5 minutes
+    if now > code_timestamp + timedelta(minutes=5):
+        session.pop("pending_2fa")
+        flash("Your code expired. Please log in again.", "warning")
+        return redirect(url_for("login"))
+
     if request.method == "POST":
         code = request.form["code"]
-        pending = session["pending_2fa"]
         if code == pending["code"]:
             admin = Admin.query.get(pending["id"])
             session.clear()
@@ -159,6 +157,34 @@ def two_factor():
 
     return render_template("two_factor.html")
 
+@app.route("/two-factor/resend")
+def resend_code():
+    if "pending_2fa" not in session:
+        return redirect(url_for("login"))
+
+    pending = session["pending_2fa"]
+    admin = Admin.query.get(pending["id"])
+    if not admin or not admin.phone_number:
+        flash("No phone number on file for this account.", "error")
+        return redirect(url_for("two_factor"))
+
+    code = str(random.randint(100000, 999999))
+    session["pending_2fa"]["code"] = code
+    session["pending_2fa"]["timestamp"] = datetime.utcnow().isoformat()
+
+    try:
+        client = Client(os.environ.get("TWILIO_SID"), os.environ.get("TWILIO_TOKEN"))
+        client.messages.create(
+            body=f"Your new AI Receptionist code is: {code}",
+            from_=os.environ.get("TWILIO_NUMBER"),
+            to=admin.phone_number
+        )
+        flash("A new verification code has been sent.", "success")
+    except Exception as e:
+        print(f"⚠️ 2FA SMS failed: {e}")
+        flash("Failed to resend code. Please contact admin.", "error")
+
+    return redirect(url_for("two_factor"))
 
 @app.route("/logout")
 def logout():
@@ -169,13 +195,11 @@ def logout():
     flash("You have been logged out.", "success")
     return redirect(url_for("login"))
 
-
 @app.route("/admin/manage")
 @require_role("superadmin")
 def manage_admins():
     admins = Admin.query.all()
     return render_template("admins_list.html", admins=admins)
-
 
 @app.route("/admin/promote/<int:admin_id>")
 @require_role("superadmin")
@@ -188,7 +212,6 @@ def promote_admin(admin_id):
     flash(f"{target.username} promoted to manager.", "success")
     return redirect(url_for("manage_admins"))
 
-
 # -------------------------------------------------
 # Error Handlers
 # -------------------------------------------------
@@ -199,7 +222,6 @@ def forbidden(e):
 @app.errorhandler(404)
 def not_found(e):
     return render_template("404.html"), 404
-
 
 if __name__ == "__main__":
     app.run(debug=True)
