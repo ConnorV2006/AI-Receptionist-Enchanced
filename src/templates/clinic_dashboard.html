@@ -1,0 +1,21 @@
+<form action="{{ url_for('send_sms', slug=clinic.slug) }}" method="post" class="card" style="padding:1rem; margin-bottom:1rem;">
+  <h3>Send SMS</h3>
+  <div style="margin-bottom:0.5rem;">
+    <label>To Number</label>
+    <input type="text" name="to" placeholder="+15551234567" required>
+  </div>
+  <div style="margin-bottom:0.5rem;">
+    <label>Message</label>
+    <textarea name="message" rows="2" placeholder="Your message..." required></textarea>
+  </div>
+  <button type="submit">Send SMS</button>
+</form>
+
+<form action="{{ url_for('call_patient', slug=clinic.slug) }}" method="post" class="card" style="padding:1rem; margin-bottom:1rem;">
+  <h3>Place Call</h3>
+  <div style="margin-bottom:0.5rem;">
+    <label>To Number</label>
+    <input type="text" name="to" placeholder="+15551234567" required>
+  </div>
+  <button type="submit">Call</button>
+</form>
