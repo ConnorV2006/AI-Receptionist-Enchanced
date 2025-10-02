@@ -39,6 +39,30 @@ class Clinic(db.Model):
     logo_url = db.Column(db.String(200))
     primary_color = db.Column(db.String(20), default="#1f6feb")
 
+
+class AuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("admin.id"))
+    action = db.Column(db.String(100), nullable=False)  # e.g., login, logout, clock_in, clock_out
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    details = db.Column(db.Text)
+    admin = db.relationship("Admin", backref="audit_logs")
+
+
+class Shift(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("admin.id"))
+    clock_in = db.Column(db.DateTime, default=datetime.utcnow)
+    clock_out = db.Column(db.DateTime, nullable=True)
+
+    admin = db.relationship("Admin", backref="shifts")
+
+    @property
+    def duration_hours(self):
+        if self.clock_in and self.clock_out:
+            return round((self.clock_out - self.clock_in).total_seconds() / 3600, 2)
+        return None
+
 # -------------------------------------------------
 # Helpers
 # -------------------------------------------------
@@ -47,6 +71,10 @@ def get_current_admin():
     if admin_id:
         return Admin.query.get(admin_id)
     return None
+
+def log_action(admin_id, action, details=""):
+    db.session.add(AuditLog(admin_id=admin_id, action=action, details=details))
+    db.session.commit()
 
 # -------------------------------------------------
 # Routes
@@ -66,6 +94,7 @@ def login():
         if admin and admin.check_password(password):
             session["admin_id"] = admin.id
             flash("Login successful!", "success")
+            log_action(admin.id, "login", f"{username} logged in.")
             return redirect(url_for("dashboard"))
         else:
             flash("Invalid username or password", "error")
@@ -74,40 +103,57 @@ def login():
 
 @app.route("/logout")
 def logout():
+    admin = get_current_admin()
+    if admin:
+        log_action(admin.id, "logout", f"{admin.username} logged out.")
     session.clear()
     flash("You have been logged out.", "success")
     return redirect(url_for("login"))
 
-@app.route("/clinic/<slug>/dashboard")
-def clinic_dashboard(slug):
+@app.route("/clock-in")
+def clock_in():
     admin = get_current_admin()
-    clinic = Clinic.query.filter_by(slug=slug).first()
-    if not clinic:
-        flash("Clinic not found.", "error")
-        return redirect(url_for("dashboard"))
-    return render_template("clinic_dashboard.html", clinic=clinic, admin=admin)
+    if not admin:
+        flash("You must be logged in to clock in.", "error")
+        return redirect(url_for("login"))
 
-@app.route("/clinic/<slug>/manager", methods=["GET", "POST"])
-def clinic_manager(slug):
+    active_shift = Shift.query.filter_by(admin_id=admin.id, clock_out=None).first()
+    if active_shift:
+        flash("You are already clocked in!", "error")
+    else:
+        shift = Shift(admin_id=admin.id)
+        db.session.add(shift)
+        log_action(admin.id, "clock_in", "Staff clocked in.")
+        flash("Clock-in successful!", "success")
+    return redirect(url_for("dashboard"))
+
+@app.route("/clock-out")
+def clock_out():
     admin = get_current_admin()
-    clinic = Clinic.query.filter_by(slug=slug).first()
-    if not clinic:
-        flash("Clinic not found.", "error")
-        return redirect(url_for("dashboard"))
+    if not admin:
+        flash("You must be logged in to clock out.", "error")
+        return redirect(url_for("login"))
 
-    if not admin or not admin.is_superadmin:
-        flash("You do not have permission to access this page.", "error")
-        return redirect(url_for("clinic_dashboard", slug=slug))
-
-    if request.method == "POST":
-        clinic.name = request.form.get("name", clinic.name)
-        clinic.logo_url = request.form.get("logo_url", clinic.logo_url)
-        clinic.primary_color = request.form.get("primary_color", clinic.primary_color)
+    active_shift = Shift.query.filter_by(admin_id=admin.id, clock_out=None).first()
+    if not active_shift:
+        flash("You are not clocked in!", "error")
+    else:
+        active_shift.clock_out = datetime.utcnow()
+        log_action(admin.id, "clock_out", "Staff clocked out.")
         db.session.commit()
-        flash("Clinic settings updated!", "success")
-        return redirect(url_for("clinic_dashboard", slug=slug))
+        flash("Clock-out successful!", "success")
+    return redirect(url_for("dashboard"))
 
-    return render_template("clinic_manager.html", clinic=clinic, admin=admin)
+@app.route("/reports")
+def reports():
+    admin = get_current_admin()
+    if not admin or not admin.is_superadmin:
+        flash("Permission denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    shifts = Shift.query.order_by(Shift.clock_in.desc()).all()
+    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(50).all()
+    return render_template("reports.html", admin=admin, shifts=shifts, logs=logs)
 
 # -------------------------------------------------
 # Run (local only)
