@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <h1>Manage Quick Replies for {{ clinic.name }}</h1>
+
+  <!-- Add New Quick Reply -->
+  <div class="card">
+    <h2>Add New Quick Reply</h2>
+    <form method="post">
+      <div>
+        <label>Title (label for staff)</label>
+        <input type="text" name="title" placeholder="E.g. 'Running late'" required>
+      </div>
+      <div>
+        <label>Message Body</label>
+        <textarea name="body" rows="2" required></textarea>
+      </div>
+      <button type="submit">Add Template</button>
+    </form>
+  </div>
+
+  <!-- Existing Quick Replies -->
+  <div class="card">
+    <h2>Existing Templates</h2>
+    {% if replies %}
+      <ul>
+        {% for r in replies %}
+          <li><strong>{{ r.title }}</strong>: {{ r.body }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No quick replies defined yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
