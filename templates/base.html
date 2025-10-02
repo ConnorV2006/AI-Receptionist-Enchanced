@@ -3,35 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <title>AI Receptionist</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
-<body>
+<body style="font-family:Arial, sans-serif; margin:0; padding:0; background:#f7f7f7; color:#333;">
 
-  <!-- Sidebar Navigation -->
-  <nav>
-    <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a>
-    <a href="{{ url_for('reports') }}">📊 Reports</a>
-    <a href="{{ url_for('manage_admins') }}">👥 Manage Staff</a>
-    <a href="{{ url_for('logout') }}">🚪 Logout</a>
-  </nav>
+  <!-- Header -->
+  <header style="background:#800000; color:white; padding:15px; text-align:center;">
+    <h1 style="margin:0;">AI Receptionist</h1>
+  </header>
 
   <!-- Main Content -->
-  <div class="content">
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="flash {{ category }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <!-- Page Content -->
+  <main style="padding:20px;">
     {% block content %}{% endblock %}
-  </div>
+  </main>
 
-  <footer>
-    <p>AI Receptionist SaaS &copy; {{ now().year }}</p>
+  <!-- Footer -->
+  <footer style="background:#ddd; padding:10px; text-align:center; font-size:0.85em; margin-top:40px;">
+    © {{ current_year|default(2025) }} AI Receptionist. All rights reserved.
   </footer>
+
 </body>
 </html>
