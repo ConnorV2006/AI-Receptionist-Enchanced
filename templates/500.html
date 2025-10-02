@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>⚠️ Oops! Something Went Wrong</h2>
+<p>We encountered an unexpected error while processing your request.</p>
+
+<p style="margin-top:10px;">
+  Please try again in a few minutes. If the problem continues, contact your system administrator.
+</p>
+
+<a href="{{ url_for('dashboard') }}">⬅️ Return to Dashboard</a>
+{% endblock %}
