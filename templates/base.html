@@ -12,6 +12,12 @@
       {% if clinic %}
         | <a href="{{ url_for('clinic_dashboard', slug=clinic.slug) }}">Dashboard</a>
         | <a href="{{ url_for('clinic_settings', slug=clinic.slug) }}">Settings</a>
+        {% if session.admin_id %}
+          {% set admin = Admin.query.get(session.admin_id) %}
+          {% if admin and admin.is_superadmin %}
+            | <a href="{{ url_for('clinic_manager', slug=clinic.slug) }}">Manage Clinic</a>
+          {% endif %}
+        {% endif %}
       {% endif %}
     </nav>
   </header>
