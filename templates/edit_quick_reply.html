@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <h1>Edit Quick Reply</h1>
+
+  <div class="card">
+    <form method="post">
+      <div>
+        <label>Title</label>
+        <input type="text" name="title" value="{{ reply.title }}" required>
+      </div>
+      <div>
+        <label>Message Body</label>
+        <textarea name="body" rows="3" required>{{ reply.body }}</textarea>
+      </div>
+      <button type="submit">Save Changes</button>
+      <a href="{{ url_for('manage_quick_replies', slug=clinic.slug) }}" style="margin-left:10px;">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
