@@ -15,7 +15,8 @@
       <div style="margin-top: 15px;">
         <strong style="font-size: 1.2em;">Quick Replies:</strong><br>
         {% for r in replies %}
-          <button type="button" title="{{ r.body }}"
+          <button type="button" 
+            title="{{ r.body }}" 
             onclick="insertQuickReply('{{ r.body | e }}')"
             style="margin:5px;padding:12px 18px;font-size:1.1em;font-weight:bold;">
             {{ r.title }}
